@@ -1,0 +1,19 @@
+{
+    "source": {
+        "include": "src"
+    },
+    "opts": {
+        "encoding": "utf8",
+            "destination": "docs/",
+                "recurse": true
+    },
+    "plugins": [
+        "plugins/markdown",
+        "better-docs/component"
+    ],
+        "templates": {
+        "better-docs": {
+            "name": "My React components"
+        }
+    }
+}
