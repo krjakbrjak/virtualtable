@@ -16,16 +16,16 @@ export class LazyPaginatedCollection {
     // A value corresponds to a Promise of the fetch request of the items
     // from an offset tht corresponds to the key of the map. The number of items
     // requested equals #pageSize property.
-    #pageOffsets
+    #pageOffsets;
 
     // Totsl number of items in a collection. -1 if collection was not loaded.
-    #totalCount
+    #totalCount;
 
     // Corresponds to the (at most) number of items fetched at each reauest.
-    #pageSize
+    #pageSize;
 
     // A callback to fetch data
-    #retrieve
+    #retrieve;
 
     /**
      * Constructs a new collection.

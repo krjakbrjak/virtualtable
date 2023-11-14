@@ -22,6 +22,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: yarn install
-    - run: yarn build --if-present -- --env.production
+    - run: yarn build --if-present -- --env production
     - run: yarn test
     - run: yarn jsdoc:gen

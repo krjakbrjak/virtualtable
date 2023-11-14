@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 import VirtualTable from '../../src/VirtualTable';
 
@@ -22,15 +22,15 @@ const fetchData = (index, count) => {
     });
 };
 
-const App = () => (
-    <VirtualTable
-        renderer={(i) => <div style={{ padding: 5 }}>{i !== undefined ? i : 'unknown'}</div>}
-        height={400}
-        fetcher={fetchData}
-    />
-);
+function App() {
+    return (
+        <VirtualTable
+            renderer={(i) => <div style={{ padding: 5 }}>{i !== undefined ? i : 'unknown'}</div>}
+            height={400}
+            fetcher={fetchData}
+        />
+    );
+}
 
-ReactDOM.render(
-    <App />,
-    document.getElementById('root'),
-);
+const root = createRoot(document.getElementById('root'));
+root.render(<App />);

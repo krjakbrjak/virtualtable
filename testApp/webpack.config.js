@@ -1,4 +1,5 @@
 const path = require('path');
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 module.exports = (env = {}) => ({
     devtool: 'inline-source-map',
@@ -10,22 +11,27 @@ module.exports = (env = {}) => ({
         publicPath: '/',
     },
     devServer: {
-        contentBase: 'testApp',
+        static: 'testApp',
         port: 9001,
-        inline: true,
         hot: true,
     },
+    plugins: [new ESLintPlugin()],
     module: {
         rules: [
             {
                 test: /\.(js|jsx)$/,
                 exclude: /node_modules/,
-                use: ['babel-loader', 'eslint-loader'],
+                use: ['babel-loader'],
             },
             {
                 test: /\.css$/i,
                 exclude: /node_modules/,
-                use: ['style-loader', 'css-loader?modules'],
+                use: ['style-loader', {
+                    loader: 'css-loader',
+                    options: {
+                        modules: true
+                    }
+                }],
             },
         ],
     },
