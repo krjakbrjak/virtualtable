@@ -1,14 +1,11 @@
 name: React VirtualTable component CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  release:
+    types: [ created ]
 
 jobs:
-  build:
-
+  publish-github-registry:
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,7 +18,10 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+        registry-url: 'https://npm.pkg.github.com'
     - run: yarn install
     - run: yarn build --if-present -- --env production
     - run: yarn test
-    - run: yarn jsdoc:gen
+    - run: yarn publish
+      env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
