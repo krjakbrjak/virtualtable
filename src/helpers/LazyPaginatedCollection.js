@@ -107,7 +107,7 @@ export class LazyPaginatedCollection {
      * @param {number} count Max number of items to fetch.
      * @returns Promise.<Array.<Object> | RangeError>
      */
-    slice(index, count) {
+    async slice(index, count) {
         // Invalid offset or count => an empty list
         if (index < 0 || count <= 0) {
             return Promise.resolve({
