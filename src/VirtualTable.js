@@ -61,7 +61,7 @@ const reducer = (state, action) => {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
-const VirtualTable = ({ height, renderer, fetcher }) => {
+function VirtualTable({ height, renderer, fetcher }) {
     const ref = useRef(null);
     const [collection, setCollection] = useState(new LazyPaginatedCollection(1, fetcher));
 
@@ -187,7 +187,7 @@ const VirtualTable = ({ height, renderer, fetcher }) => {
             </div>
         </div>
     );
-};
+}
 
 VirtualTable.propTypes = {
     height: PropTypes.number.isRequired,
