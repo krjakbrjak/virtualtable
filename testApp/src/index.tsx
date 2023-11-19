@@ -8,8 +8,9 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import VirtualTable from '../../src/VirtualTable';
+import { Result } from '../../src/helpers/types';
 
-const fetchData = (index, count) => {
+const fetchData = (index: number, count: number): Promise<Result<number>> => {
     const items = [...Array(count).keys()].map((value) => value + index);
     return new Promise((resolve, reject) => {
         setTimeout(() => {

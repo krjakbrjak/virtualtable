@@ -12,21 +12,23 @@ describe('Helpers', () => {
     });
 
     it('LazyPaginatedCollection', (done) => {
-        const collection = new LazyPaginatedCollection(
+        const collection = new LazyPaginatedCollection<number>(
             COLLECTION_PAGE_SIZE,
-            (index, count) => new Promise((resolve, reject) => {
-                if (index > COLLECTION_COUNT - 1 || index < 0 || count < 0) {
-                    reject(new RangeError());
-                } else {
-                    const tmp = Math.min(count, COLLECTION_COUNT - index);
-                    const items = [...Array(tmp).keys()].map((value) => value + index);
-                    resolve({
-                        from: index,
-                        items,
-                        totalCount: COLLECTION_COUNT,
-                    });
-                }
-            }),
+            (index, count) => {
+                return new Promise((resolve, reject) => {
+                    if (index > COLLECTION_COUNT - 1 || index < 0 || count < 0) {
+                        reject(new RangeError());
+                    } else {
+                        const tmp = Math.min(count, COLLECTION_COUNT - index);
+                        const items = [...Array(tmp).keys()].map((value) => value + index);
+                        resolve({
+                            from: index,
+                            items,
+                            totalCount: COLLECTION_COUNT,
+                        });
+                    }
+                });
+            }
         );
 
         const all = [];

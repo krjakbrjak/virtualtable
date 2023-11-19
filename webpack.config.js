@@ -5,7 +5,7 @@ module.exports = (env = {}) => {
     const mode = env.production ? 'production' : 'development';
     return ({
         mode,
-        entry: './src/index.js',
+        entry: './src/index.ts',
         output: {
             path: path.resolve('dist'),
             filename: 'main.js',
@@ -20,6 +20,11 @@ module.exports = (env = {}) => {
                     use: ['babel-loader'],
                 },
                 {
+                    test: /\.tsx?$/,
+                    use: 'ts-loader',
+                    exclude: /node_modules/,
+                },
+                {
                     test: /\.css$/i,
                     exclude: /node_modules/,
                     use: ['style-loader', {
@@ -32,7 +37,7 @@ module.exports = (env = {}) => {
             ],
         },
         resolve: {
-            extensions: ['.js'],
+            extensions: ['.tsx', '.ts', '.js'],
         },
     });
 };

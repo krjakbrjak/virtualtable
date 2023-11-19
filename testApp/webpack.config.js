@@ -4,7 +4,7 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 module.exports = (env = {}) => ({
     devtool: 'inline-source-map',
     mode: 'development',
-    entry: './testApp/src/index.js',
+    entry: './testApp/src/index.tsx',
     output: {
         path: path.resolve('testApp/dist'),
         filename: 'index.js',
@@ -24,6 +24,11 @@ module.exports = (env = {}) => ({
                 use: ['babel-loader'],
             },
             {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
+            {
                 test: /\.css$/i,
                 exclude: /node_modules/,
                 use: ['style-loader', {
@@ -36,6 +41,6 @@ module.exports = (env = {}) => ({
         ],
     },
     resolve: {
-        extensions: ['.js'],
+        extensions: ['.tsx', '.ts', '.js'],
     },
 });
