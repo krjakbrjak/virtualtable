@@ -5,7 +5,7 @@
  */
 
 import React, {
-    useReducer, useEffect, useState, useRef,
+    useReducer, useEffect, useState, useRef, ReactNode,
 } from 'react';
 import PropTypes from 'prop-types';
 
@@ -15,6 +15,26 @@ import './base.css';
 import css from './VirtualTable.css';
 
 import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
+import { Result, Fetcher } from './helpers/types';
+
+interface State<Type> {
+    scrollTop: number,
+    itemHeight: number,
+    itemCount: number,
+    items: Array<Type>,
+    offset: number,
+}
+
+interface Action<Type> {
+    type: 'scroll' | 'render' | 'loaded';
+    data: Partial<State<Type>>
+}
+
+interface Args<Type> {
+    height: number;
+    renderer: (data: Type) => ReactNode;
+    fetcher: Fetcher<Type>;
+}
 
 /**
  * Reducer function for managing state changes.
@@ -25,12 +45,12 @@ import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
  * @param {any} [action.data] - Additional data associated with the action.
  * @returns {Object} - The new state after applying the action.
  */
-const reducer = (state, action) => {
+function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     switch (action.type) {
     case 'scroll':
-        return { ...state, scrollTop: action.data };
+        return { ...state, ...action.data };
     case 'render':
-        return { ...state, itemHeight: action.data };
+        return { ...state, ...action.data };
     case 'loaded':
         return { ...state, ...action.data };
     default:
@@ -61,11 +81,11 @@ const reducer = (state, action) => {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
-function VirtualTable({ height, renderer, fetcher }) {
+function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>) {
     const ref = useRef(null);
-    const [collection, setCollection] = useState(new LazyPaginatedCollection(1, fetcher));
+    const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
 
-    const [state, dispatch] = useReducer(reducer, {
+    const [state, dispatch] = useReducer(reducer<Type>, {
         scrollTop: 0,
         itemHeight: 0,
         itemCount: 0,
@@ -129,7 +149,7 @@ function VirtualTable({ height, renderer, fetcher }) {
         state,
     ]);
 
-    const generate = (offset, d) => {
+    const generate = (offset: number, d: Array<Type>) => {
         const ret = [];
         for (let i = 0; i < d.length; i += 1) {
             ret.push(<div key={i + offset}>{renderer(d[i])}</div>);
@@ -144,7 +164,9 @@ function VirtualTable({ height, renderer, fetcher }) {
                 if (ref.current.children[0].clientHeight !== state.itemHeight) {
                     dispatch({
                         type: 'render',
-                        data: ref.current.children[0].clientHeight,
+                        data: {
+                            itemHeight: ref.current.children[0].clientHeight,
+                        },
                     });
                 }
             }
@@ -176,7 +198,9 @@ function VirtualTable({ height, renderer, fetcher }) {
                 onScroll={(e) => {
                     dispatch({
                         type: 'scroll',
-                        data: e.target.scrollTop,
+                        data: {
+                            scrollTop: (e.target as HTMLElement).scrollTop,
+                        },
                     });
                 }}
             >

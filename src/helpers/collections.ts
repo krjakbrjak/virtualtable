@@ -4,6 +4,11 @@
  * @property {Array.Object} items Items
  */
 
+interface Page<Type> {
+    items: Array<Type>;
+    offset: number;
+}
+
 /**
  * Constructs a new slice of data.
  *
@@ -21,7 +26,7 @@
  * @param {Slice} slice A slice of the collection
  * @returns Array.<Object>
  */
-export function slideItems(currentOffset, { items, offset }) {
+export function slideItems<Type>(currentOffset: number, { items, offset}: Page<Type>) {
     const count = items.length;
     // Nothing to do
     if (offset === currentOffset) {

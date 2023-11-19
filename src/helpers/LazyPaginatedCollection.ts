@@ -1,3 +1,5 @@
+import { Result, Fetcher } from './types'
+
 /**
  * @callback LazyPaginatedCollection.retrieve
  * @async
@@ -10,22 +12,22 @@
 /**
  * Calss representing a lazy paginated collection of data.
  */
-export class LazyPaginatedCollection {
+export class LazyPaginatedCollection<Type> {
     // Stores a map of Promises to page requests. A key
     // corresponds to the index of the item within a collection.
     // A value corresponds to a Promise of the fetch request of the items
     // from an offset tht corresponds to the key of the map. The number of items
     // requested equals #pageSize property.
-    #pageOffsets;
+    #pageOffsets: { [id: number]: Promise<Result<Type>> };
 
     // Totsl number of items in a collection. -1 if collection was not loaded.
-    #totalCount;
+    #totalCount: number;
 
     // Corresponds to the (at most) number of items fetched at each reauest.
-    #pageSize;
+    #pageSize: number;
 
     // A callback to fetch data
-    #retrieve;
+    #retrieve: Fetcher<Type>;
 
     /**
      * Constructs a new collection.
@@ -33,7 +35,7 @@ export class LazyPaginatedCollection {
      * @param {number} pageSize Page size
      * @param {LazyPaginatedCollection.retrieve} retrieve A callback to fetch the data
      */
-    constructor(pageSize, retrieve) {
+    constructor(pageSize: number, retrieve: Fetcher<Type>) {
         this.#pageOffsets = {};
         this.#totalCount = -1;
         this.#pageSize = pageSize;
@@ -69,7 +71,7 @@ export class LazyPaginatedCollection {
      * @private
      * @returns {number}
      */
-    #pageIndexFor = (index) => (index - (index % this.#pageSize));
+    #pageIndexFor = (index: number) => (index - (index % this.#pageSize));
 
     /**
      * Returns an items at index.
@@ -78,7 +80,7 @@ export class LazyPaginatedCollection {
      * @param {number} index An index of an item to retrieve.
      * @returns Promise.<number | RangeError>
      */
-    at(index) {
+    at(index: number) {
         // Invalid offset
         if (index < 0) {
             return Promise.reject(new RangeError());
@@ -107,7 +109,7 @@ export class LazyPaginatedCollection {
      * @param {number} count Max number of items to fetch.
      * @returns Promise.<Array.<Object> | RangeError>
      */
-    async slice(index, count) {
+    async slice(index: number, count: number) {
         // Invalid offset or count => an empty list
         if (index < 0 || count <= 0) {
             return Promise.resolve({
@@ -131,7 +133,7 @@ export class LazyPaginatedCollection {
         return Promise.all(all.map((promise) => promise.catch((err) => err)))
             .then((results) => results.filter((result) => !(result instanceof Error)))
             .then((results) => {
-                const ret = [];
+                const ret: Array<Type> = [];
                 for (let i = 0; i < results.length; i += 1) {
                     this.#totalCount = results[i].totalCount;
                     ret.splice(ret.length, 0, ...results[i].items);
