@@ -1,4 +1,5 @@
 {
+    "include": ["src/*", "src/helpers/**/*"],
     "compilerOptions": {
         "outDir": "./dist/",
         "sourceMap": true,
@@ -9,6 +10,7 @@
         "allowJs": true,
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true,
-        "downlevelIteration": true
+        "downlevelIteration": true,
+        "declaration": true
     }
 }
