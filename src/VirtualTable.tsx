@@ -81,7 +81,7 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
-function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>) {
+export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
 
@@ -174,7 +174,7 @@ function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>) {
     });
 
     if (state.items.length === 0) {
-        return null;
+        return <div />;
     }
 
     return (
@@ -221,5 +221,3 @@ VirtualTable.propTypes = {
 
 VirtualTable.defaultProps = {
 };
-
-export default VirtualTable;
