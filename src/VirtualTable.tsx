@@ -23,10 +23,12 @@ interface State<Type> {
     itemCount: number,
     items: Array<Type>,
     offset: number,
+    selected: number;
+    hovered: number;
 }
 
 interface Action<Type> {
-    type: 'scroll' | 'render' | 'loaded';
+    type: 'scroll' | 'render' | 'loaded' | 'click' | 'hover';
     data: Partial<State<Type>>
 }
 
@@ -52,6 +54,10 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     case 'render':
         return { ...state, ...action.data };
     case 'loaded':
+        return { ...state, ...action.data };
+    case 'click':
+        return { ...state, ...action.data };
+    case 'hover':
         return { ...state, ...action.data };
     default:
         return state;
@@ -91,6 +97,8 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
         itemCount: 0,
         items: [],
         offset: 0,
+        selected: -1,
+        hovered: -1,
     });
 
     const [currentOffset, setCurrentOffset] = useState(0);
@@ -151,8 +159,17 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
 
     const generate = (offset: number, d: Array<Type>) => {
         const ret = [];
+
         for (let i = 0; i < d.length; i += 1) {
-            ret.push(<div key={i + offset}>{renderer(d[i])}</div>);
+            let backgroundColor = 'transparent';
+            if (i + offset === state.selected) {
+                backgroundColor = 'dimgrey';
+            } else if (i + offset === state.hovered) {
+                backgroundColor = 'silver';
+            }
+            ret.push(<div key={i + offset} style={{
+                backgroundColor,
+            }}>{renderer(d[i])}</div>);
         }
         return ret;
     };
@@ -194,6 +211,32 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
             <div
                 style={{
                     height, overflow: 'scroll', position: 'absolute', width: '100%', top: 0,
+                }}
+                onMouseMove={(e) => {
+                    const childElement = ref.current.children[Math.floor((e.clientY + state.scrollTop) / state.itemHeight) - state.offset];
+                    if (childElement) {
+                        const event = new Event('mouseover', { bubbles: true, cancelable: false });
+                        childElement.dispatchEvent(event);
+                        dispatch({
+                            type: 'hover',
+                            data: {
+                                hovered: Math.floor((e.clientY + state.scrollTop) / state.itemHeight),
+                            },
+                        });
+                    }
+                }}
+                onClick={(e) => {
+                    const childElement = ref.current.children[Math.floor((e.clientY + state.scrollTop) / state.itemHeight) - state.offset];
+                    if (childElement) {
+                        const clickEvent = new Event('click', { bubbles: true, cancelable: false });
+                        childElement.children[0].dispatchEvent(clickEvent);
+                        dispatch({
+                            type: 'click',
+                            data: {
+                                selected: Math.floor((e.clientY + state.scrollTop) / state.itemHeight),
+                            },
+                        });
+                    }
                 }}
                 onScroll={(e) => {
                     dispatch({
