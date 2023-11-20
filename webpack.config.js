@@ -8,7 +8,7 @@ module.exports = (env = {}) => {
         entry: './src/index.ts',
         output: {
             path: path.resolve('dist'),
-            filename: 'main.js',
+            filename: 'index.js',
             libraryTarget: 'commonjs2',
         },
         plugins: [new ESLintPlugin()],
