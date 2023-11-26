@@ -26,7 +26,14 @@ const fetchData = (index: number, count: number): Promise<Result<number>> => {
 function App() {
     return (
         <VirtualTable<number>
-            renderer={(i) => <div style={{ padding: 5 }}>{i !== undefined ? i : 'unknown'}</div>}
+            renderer={(i) => <div
+                style={{ padding: 5 }}
+                onClick={(e) => {
+                    console.log(`${i} clicked`);
+                }}
+            >
+                {i !== undefined ? i : 'unknown'}
+            </div>}
             height={400}
             fetcher={fetchData}
         />
