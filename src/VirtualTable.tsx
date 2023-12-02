@@ -213,27 +213,29 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
                     height, overflow: 'scroll', position: 'absolute', width: '100%', top: 0,
                 }}
                 onMouseMove={(e) => {
-                    const childElement = ref.current.children[Math.floor((e.clientY + state.scrollTop) / state.itemHeight) - state.offset];
+                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                    const childElement = ref.current.children[index - state.offset];
                     if (childElement) {
                         const event = new Event('mouseover', { bubbles: true, cancelable: false });
                         childElement.dispatchEvent(event);
                         dispatch({
                             type: 'hover',
                             data: {
-                                hovered: Math.floor((e.clientY + state.scrollTop) / state.itemHeight),
+                                hovered: index,
                             },
                         });
                     }
                 }}
                 onClick={(e) => {
-                    const childElement = ref.current.children[Math.floor((e.clientY + state.scrollTop) / state.itemHeight) - state.offset];
+                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                    const childElement = ref.current.children[index - state.offset];
                     if (childElement) {
                         const clickEvent = new Event('click', { bubbles: true, cancelable: false });
                         childElement.children[0].dispatchEvent(clickEvent);
                         dispatch({
                             type: 'click',
                             data: {
-                                selected: Math.floor((e.clientY + state.scrollTop) / state.itemHeight),
+                                selected: index,
                             },
                         });
                     }
