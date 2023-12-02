@@ -9,6 +9,9 @@ import { createRoot } from 'react-dom/client';
 
 import VirtualTable from '../../src/VirtualTable';
 import { Result } from '../../src/helpers/types';
+import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 const fetchData = (index: number, count: number): Promise<Result<number>> => {
     const items = [...Array(count).keys()].map((value) => value + index);
@@ -25,18 +28,34 @@ const fetchData = (index: number, count: number): Promise<Result<number>> => {
 
 function App() {
     return (
-        <VirtualTable<number>
-            renderer={(i) => <div
-                style={{ padding: 5 }}
-                onClick={(e) => {
-                    console.log(`${i} clicked`);
-                }}
-            >
-                {i !== undefined ? i : 'unknown'}
-            </div>}
-            height={400}
-            fetcher={fetchData}
-        />
+        <Container>
+            <Row>
+                <Col>lsjkdnvln</Col>
+                <Col>lsjkdnvln</Col>
+            </Row>
+            <Row>
+                <Col>lsjkdnvln</Col>
+                <Col>
+                    <VirtualTable<number>
+                        renderer={(i) => <div
+                            style={{
+                                padding: 5,
+                            }}
+                            onClick={(e) => {
+                                console.log(`${i} clicked`);
+                            }}
+                        >
+                            {i !== undefined ? i : 'unknown'}
+                        </div>}
+                        height={400}
+                        fetcher={fetchData}
+                    />
+                </Col>
+                <Col>
+                    lsjkdnvln
+                </Col>
+            </Row>
+        </Container>
     );
 }
 

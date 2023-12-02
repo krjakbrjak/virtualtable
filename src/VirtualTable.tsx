@@ -16,6 +16,7 @@ import css from './VirtualTable.css';
 
 import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
 import { Result, Fetcher } from './helpers/types';
+import { Container, Row, Col } from 'react-bootstrap';
 
 interface State<Type> {
     scrollTop: number,
@@ -49,18 +50,18 @@ interface Args<Type> {
  */
 function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     switch (action.type) {
-    case 'scroll':
-        return { ...state, ...action.data };
-    case 'render':
-        return { ...state, ...action.data };
-    case 'loaded':
-        return { ...state, ...action.data };
-    case 'click':
-        return { ...state, ...action.data };
-    case 'hover':
-        return { ...state, ...action.data };
-    default:
-        return state;
+        case 'scroll':
+            return { ...state, ...action.data };
+        case 'render':
+            return { ...state, ...action.data };
+        case 'loaded':
+            return { ...state, ...action.data };
+        case 'click':
+            return { ...state, ...action.data };
+        case 'hover':
+            return { ...state, ...action.data };
+        default:
+            return state;
     }
 };
 
@@ -195,66 +196,74 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
     }
 
     return (
-        <div style={{ position: 'relative' }}>
-            <div
-                ref={ref}
-                className={css.grid}
-                style={{
-                    height, position: 'sticky', top: 0, width: '100%', overflow: 'hidden',
-                }}
-            >
-                {generate(currentOffset, slideItems(currentOffset, {
-                    items: state.items,
-                    offset: state.offset,
-                }))}
-            </div>
-            <div
-                style={{
-                    height, overflow: 'scroll', position: 'absolute', width: '100%', top: 0,
-                }}
-                onMouseMove={(e) => {
-                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                    const childElement = ref.current.children[index - state.offset];
-                    if (childElement) {
-                        const event = new Event('mouseover', { bubbles: true, cancelable: false });
-                        childElement.dispatchEvent(event);
-                        dispatch({
-                            type: 'hover',
-                            data: {
-                                hovered: index,
-                            },
-                        });
-                    }
-                }}
-                onClick={(e) => {
-                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                    const childElement = ref.current.children[index - state.offset];
-                    if (childElement) {
-                        const clickEvent = new Event('click', { bubbles: true, cancelable: false });
-                        childElement.children[0].dispatchEvent(clickEvent);
-                        dispatch({
-                            type: 'click',
-                            data: {
-                                selected: index,
-                            },
-                        });
-                    }
-                }}
-                onScroll={(e) => {
-                    dispatch({
-                        type: 'scroll',
-                        data: {
-                            scrollTop: (e.target as HTMLElement).scrollTop,
-                        },
-                    });
-                }}
-            >
-                <div style={{
-                    height: `${state.itemCount * state.itemHeight}px`, position: 'absolute', top: 0, width: '100%',
-                }}
-                />
-            </div>
-        </div>
+        <Container>
+            <Row>
+                <Col>
+                    <div
+                        ref={ref}
+                        className='overflow-hidden'
+                        style={{
+                            height,
+                        }}
+                    >
+                        {generate(currentOffset, slideItems(currentOffset, {
+                            items: state.items,
+                            offset: state.offset,
+                        }))}
+                    </div>
+                    <div
+                        className='overflow-scroll position-absolute'
+                        style={{
+                            height,
+                            top: ref.current ? ref.current.getBoundingClientRect().top : 0,
+                            left: ref.current ? ref.current.getBoundingClientRect().left : 0,
+                            width: ref.current ? ref.current.getBoundingClientRect().width : '0',
+                        }}
+                        onMouseMove={(e) => {
+                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                            const childElement = ref.current.children[index - state.offset];
+                            if (childElement) {
+                                const event = new Event('mouseover', { bubbles: true, cancelable: false });
+                                childElement.children[0].dispatchEvent(event);
+                                dispatch({
+                                    type: 'hover',
+                                    data: {
+                                        hovered: index,
+                                    },
+                                });
+                            }
+                        }}
+                        onClick={(e) => {
+                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                            const childElement = ref.current.children[index - state.offset];
+                            if (childElement) {
+                                const clickEvent = new Event('click', { bubbles: true, cancelable: false });
+                                childElement.children[0].dispatchEvent(clickEvent);
+                                dispatch({
+                                    type: 'click',
+                                    data: {
+                                        selected: index,
+                                    },
+                                });
+                            }
+                        }}
+                        onScroll={(e) => {
+                            dispatch({
+                                type: 'scroll',
+                                data: {
+                                    scrollTop: (e.target as HTMLElement).scrollTop,
+                                },
+                            });
+                        }}
+                    >
+                        <div style={{
+                            height: `${state.itemCount * state.itemHeight}px`, width: '100%',
+                        }}
+                        />
+                    </div>
+                </Col>
+            </Row>
+        </Container>
     );
 }
 
