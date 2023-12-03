@@ -88,9 +88,21 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
+interface Rect {
+    x: number;
+    y: number;
+    height: number;
+    width: number;
+}
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
+    const [rect, setRect] = useState<Rect>({
+        x: 0,
+        y: 0,
+        height: 0,
+        width: 0,
+    });
 
     const [state, dispatch] = useReducer(reducer<Type>, {
         scrollTop: 0,
@@ -107,6 +119,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
     const calculatePageCount = () => 2 * Math.floor(height / state.itemHeight);
 
     useEffect(() => {
+        const handler = () => {
+            if (ref && ref.current) {
+                setRect(ref.current.getBoundingClientRect());
+            }
+        };
+        window.addEventListener('resize', handler);
         collection.slice(0, 1).then((result) => {
             dispatch({
                 type: 'loaded',
@@ -116,6 +134,9 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                 },
             });
         });
+        return function cleanup() {
+            window.removeEventListener('resize', handler, true);
+        }
     }, []);
 
     useEffect(() => {
@@ -181,6 +202,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             ref.current.scrollTop = state.scrollTop % state.itemHeight;
             if (ref.current.children && ref.current.children.length) {
                 if (ref.current.children[0].clientHeight !== state.itemHeight) {
+                    setRect(ref.current.getBoundingClientRect());
                     dispatch({
                         type: 'render',
                         data: {
@@ -215,10 +237,10 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                     <div
                         className='overflow-scroll position-absolute'
                         style={{
-                            height,
-                            top: ref.current ? ref.current.getBoundingClientRect().top : 0,
-                            left: ref.current ? ref.current.getBoundingClientRect().left : 0,
-                            width: ref.current ? ref.current.getBoundingClientRect().width : '0',
+                            top: rect.y,
+                            left: rect.x,
+                            width: rect.width,
+                            height: rect.height,
                         }}
                         onMouseMove={(e) => {
                             const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
