@@ -1,11 +1,15 @@
 /**
+ * Represent a page.
  * @typedef {Object} Slice
- * @property {number} offset An offset (the index of the first item in the slice)
- * @property {Array.Object} items Items
  */
-
 interface Page<Type> {
+    /**
+     * Page items
+     */
     items: Array<Type>;
+    /**
+     * An offset (the index of the first item in the slice)
+     */
     offset: number;
 }
 

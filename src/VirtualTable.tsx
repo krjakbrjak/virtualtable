@@ -81,12 +81,7 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  */
 
 /**
- * @description VirtualTable component.
- *
- * Displays a large set of data (with a low memory usage).
- *
- * @param {VirtualTable.Props} props Properties
- * @component
+ * Represent the rectangular.
  */
 interface Rect {
     x: number;
@@ -94,6 +89,15 @@ interface Rect {
     height: number;
     width: number;
 }
+
+/**
+ * @description VirtualTable component.
+ *
+ * Displays a large set of data (with a low memory usage).
+ *
+ * @param {VirtualTable.Props} props Properties
+ * @component
+ */
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));

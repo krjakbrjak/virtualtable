@@ -33,7 +33,7 @@ export class LazyPaginatedCollection<Type> {
      * Constructs a new collection.
      *
      * @param {number} pageSize Page size
-     * @param {LazyPaginatedCollection.retrieve} retrieve A callback to fetch the data
+     * @param {Fetcher<Type>} retrieve A callback to fetch the data
      */
     constructor(pageSize: number, retrieve: Fetcher<Type>) {
         this.#pageOffsets = {};
