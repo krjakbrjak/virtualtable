@@ -8,11 +8,13 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import VirtualTable from '../../src/VirtualTable';
-import { Result } from '../../src/helpers/types';
+import { Result, Style } from '../../src/helpers/types';
+import css from './index.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
+const style = css as Style;
 const fetchData = (index: number, count: number): Promise<Result<number>> => {
     const items = [...Array(count).keys()].map((value) => value + index);
     return new Promise((resolve, reject) => {
@@ -29,15 +31,16 @@ const fetchData = (index: number, count: number): Promise<Result<number>> => {
 function App() {
     return (
         <Container>
+            <Row style={{
+                height: '50px'
+            }}/>
             <Row>
-                <Col>lsjkdnvln</Col>
-                <Col>lsjkdnvln</Col>
-            </Row>
-            <Row>
-                <Col>lsjkdnvln</Col>
+                <Col/>
                 <Col>
                     <VirtualTable<number>
+                        style={style}
                         renderer={(i) => <div
+                            className='text-center'
                             style={{
                                 padding: 5,
                             }}
@@ -51,10 +54,11 @@ function App() {
                         fetcher={fetchData}
                     />
                 </Col>
-                <Col>
-                    lsjkdnvln
-                </Col>
+                <Col/>
             </Row>
+            <Row style={{
+                height: '50px'
+            }}/>
         </Container>
     );
 }

@@ -1,0 +1,10 @@
+.item {
+}
+
+.item.hover {
+    background-color: aquamarine;
+}
+
+.item.select {
+    background-color: red;
+}

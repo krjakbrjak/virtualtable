@@ -12,10 +12,9 @@ import PropTypes from 'prop-types';
 import { slideItems } from './helpers/collections';
 
 import './base.css';
-import css from './VirtualTable.css';
 
 import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
-import { Result, Fetcher } from './helpers/types';
+import { Style, Fetcher } from './helpers/types';
 import { Container, Row, Col } from 'react-bootstrap';
 
 interface State<Type> {
@@ -37,6 +36,7 @@ interface Args<Type> {
     height: number;
     renderer: (data: Type) => ReactNode;
     fetcher: Fetcher<Type>;
+    style?: Style;
 }
 
 /**
@@ -88,7 +88,7 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
-export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>): JSX.Element {
+export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
 
@@ -162,15 +162,16 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
         const ret = [];
 
         for (let i = 0; i < d.length; i += 1) {
-            let backgroundColor = 'transparent';
-            if (i + offset === state.selected) {
-                backgroundColor = 'dimgrey';
-            } else if (i + offset === state.hovered) {
-                backgroundColor = 'silver';
+            let className = '';
+            if (style) {
+                className = style.item;
             }
-            ret.push(<div key={i + offset} style={{
-                backgroundColor,
-            }}>{renderer(d[i])}</div>);
+            if (i + offset === state.selected && style) {
+                className = `${className} ${style.select}`;
+            } else if (i + offset === state.hovered && style) {
+                className = `${className} ${style.hover}`;
+            }
+            ret.push(<div key={i + offset} className={className}>{renderer(d[i])}</div>);
         }
         return ret;
     };
