@@ -39,11 +39,8 @@ function App() {
                 <Col>
                     <VirtualTable<number>
                         style={style}
-                        renderer={(i) => <div
-                            className='text-center'
-                            style={{
-                                padding: 5,
-                            }}
+                        renderer={(i, classes) => <div
+                            className={`text-center border rounded-pill p-3 ${classes}`}
                             onClick={(e) => {
                                 console.log(`${i} clicked`);
                             }}

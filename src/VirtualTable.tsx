@@ -34,7 +34,7 @@ interface Action<Type> {
 
 interface Args<Type> {
     height: number;
-    renderer: (data: Type) => ReactNode;
+    renderer: (data: Type, classes: string) => ReactNode;
     fetcher: Fetcher<Type>;
     style?: Style;
 }
@@ -171,7 +171,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             } else if (i + offset === state.hovered && style) {
                 className = `${className} ${style.hover}`;
             }
-            ret.push(<div key={i + offset} className={className}>{renderer(d[i])}</div>);
+            ret.push(<div key={i + offset}>{renderer(d[i], className)}</div>);
         }
         return ret;
     };
