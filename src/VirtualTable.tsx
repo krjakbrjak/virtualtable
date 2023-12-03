@@ -12,10 +12,10 @@ import PropTypes from 'prop-types';
 import { slideItems } from './helpers/collections';
 
 import './base.css';
-import css from './VirtualTable.css';
 
 import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
-import { Result, Fetcher } from './helpers/types';
+import { Style, Fetcher } from './helpers/types';
+import { Container, Row, Col } from 'react-bootstrap';
 
 interface State<Type> {
     scrollTop: number,
@@ -34,8 +34,9 @@ interface Action<Type> {
 
 interface Args<Type> {
     height: number;
-    renderer: (data: Type) => ReactNode;
+    renderer: (data: Type, classes: string) => ReactNode;
     fetcher: Fetcher<Type>;
+    style?: Style;
 }
 
 /**
@@ -49,18 +50,18 @@ interface Args<Type> {
  */
 function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     switch (action.type) {
-    case 'scroll':
-        return { ...state, ...action.data };
-    case 'render':
-        return { ...state, ...action.data };
-    case 'loaded':
-        return { ...state, ...action.data };
-    case 'click':
-        return { ...state, ...action.data };
-    case 'hover':
-        return { ...state, ...action.data };
-    default:
-        return state;
+        case 'scroll':
+            return { ...state, ...action.data };
+        case 'render':
+            return { ...state, ...action.data };
+        case 'loaded':
+            return { ...state, ...action.data };
+        case 'click':
+            return { ...state, ...action.data };
+        case 'hover':
+            return { ...state, ...action.data };
+        default:
+            return state;
     }
 };
 
@@ -87,9 +88,21 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  * @param {VirtualTable.Props} props Properties
  * @component
  */
-export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<Type>): JSX.Element {
+interface Rect {
+    x: number;
+    y: number;
+    height: number;
+    width: number;
+}
+export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
+    const [rect, setRect] = useState<Rect>({
+        x: 0,
+        y: 0,
+        height: 0,
+        width: 0,
+    });
 
     const [state, dispatch] = useReducer(reducer<Type>, {
         scrollTop: 0,
@@ -106,6 +119,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
     const calculatePageCount = () => 2 * Math.floor(height / state.itemHeight);
 
     useEffect(() => {
+        const handler = () => {
+            if (ref && ref.current) {
+                setRect(ref.current.getBoundingClientRect());
+            }
+        };
+        window.addEventListener('resize', handler);
         collection.slice(0, 1).then((result) => {
             dispatch({
                 type: 'loaded',
@@ -115,6 +134,9 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
                 },
             });
         });
+        return function cleanup() {
+            window.removeEventListener('resize', handler, true);
+        }
     }, []);
 
     useEffect(() => {
@@ -161,15 +183,16 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
         const ret = [];
 
         for (let i = 0; i < d.length; i += 1) {
-            let backgroundColor = 'transparent';
-            if (i + offset === state.selected) {
-                backgroundColor = 'dimgrey';
-            } else if (i + offset === state.hovered) {
-                backgroundColor = 'silver';
+            let className = '';
+            if (style) {
+                className = style.item;
             }
-            ret.push(<div key={i + offset} style={{
-                backgroundColor,
-            }}>{renderer(d[i])}</div>);
+            if (i + offset === state.selected && style) {
+                className = `${className} ${style.select}`;
+            } else if (i + offset === state.hovered && style) {
+                className = `${className} ${style.hover}`;
+            }
+            ret.push(<div key={i + offset}>{renderer(d[i], className)}</div>);
         }
         return ret;
     };
@@ -179,6 +202,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
             ref.current.scrollTop = state.scrollTop % state.itemHeight;
             if (ref.current.children && ref.current.children.length) {
                 if (ref.current.children[0].clientHeight !== state.itemHeight) {
+                    setRect(ref.current.getBoundingClientRect());
                     dispatch({
                         type: 'render',
                         data: {
@@ -195,66 +219,74 @@ export default function VirtualTable<Type>({ height, renderer, fetcher }: Args<T
     }
 
     return (
-        <div style={{ position: 'relative' }}>
-            <div
-                ref={ref}
-                className={css.grid}
-                style={{
-                    height, position: 'sticky', top: 0, width: '100%', overflow: 'hidden',
-                }}
-            >
-                {generate(currentOffset, slideItems(currentOffset, {
-                    items: state.items,
-                    offset: state.offset,
-                }))}
-            </div>
-            <div
-                style={{
-                    height, overflow: 'scroll', position: 'absolute', width: '100%', top: 0,
-                }}
-                onMouseMove={(e) => {
-                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                    const childElement = ref.current.children[index - state.offset];
-                    if (childElement) {
-                        const event = new Event('mouseover', { bubbles: true, cancelable: false });
-                        childElement.dispatchEvent(event);
-                        dispatch({
-                            type: 'hover',
-                            data: {
-                                hovered: index,
-                            },
-                        });
-                    }
-                }}
-                onClick={(e) => {
-                    const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                    const childElement = ref.current.children[index - state.offset];
-                    if (childElement) {
-                        const clickEvent = new Event('click', { bubbles: true, cancelable: false });
-                        childElement.children[0].dispatchEvent(clickEvent);
-                        dispatch({
-                            type: 'click',
-                            data: {
-                                selected: index,
-                            },
-                        });
-                    }
-                }}
-                onScroll={(e) => {
-                    dispatch({
-                        type: 'scroll',
-                        data: {
-                            scrollTop: (e.target as HTMLElement).scrollTop,
-                        },
-                    });
-                }}
-            >
-                <div style={{
-                    height: `${state.itemCount * state.itemHeight}px`, position: 'absolute', top: 0, width: '100%',
-                }}
-                />
-            </div>
-        </div>
+        <Container>
+            <Row>
+                <Col>
+                    <div
+                        ref={ref}
+                        className='overflow-hidden'
+                        style={{
+                            height,
+                        }}
+                    >
+                        {generate(currentOffset, slideItems(currentOffset, {
+                            items: state.items,
+                            offset: state.offset,
+                        }))}
+                    </div>
+                    <div
+                        className='overflow-scroll position-absolute'
+                        style={{
+                            top: rect.y,
+                            left: rect.x,
+                            width: rect.width,
+                            height: rect.height,
+                        }}
+                        onMouseMove={(e) => {
+                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                            const childElement = ref.current.children[index - state.offset];
+                            if (childElement) {
+                                const event = new Event('mouseover', { bubbles: true, cancelable: false });
+                                childElement.children[0].dispatchEvent(event);
+                                dispatch({
+                                    type: 'hover',
+                                    data: {
+                                        hovered: index,
+                                    },
+                                });
+                            }
+                        }}
+                        onClick={(e) => {
+                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
+                            const childElement = ref.current.children[index - state.offset];
+                            if (childElement) {
+                                const clickEvent = new Event('click', { bubbles: true, cancelable: false });
+                                childElement.children[0].dispatchEvent(clickEvent);
+                                dispatch({
+                                    type: 'click',
+                                    data: {
+                                        selected: index,
+                                    },
+                                });
+                            }
+                        }}
+                        onScroll={(e) => {
+                            dispatch({
+                                type: 'scroll',
+                                data: {
+                                    scrollTop: (e.target as HTMLElement).scrollTop,
+                                },
+                            });
+                        }}
+                    >
+                        <div style={{
+                            height: `${state.itemCount * state.itemHeight}px`, width: '100%',
+                        }}
+                        />
+                    </div>
+                </Col>
+            </Row>
+        </Container>
     );
 }
 
