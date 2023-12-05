@@ -5,10 +5,11 @@
  */
 
 import VirtualTable from './VirtualTable';
-import { Result, Fetcher } from './helpers/types';
+import { Result, DataSource, Style } from './helpers/types';
 
 export {
     VirtualTable,
     Result,
-    Fetcher,
+    DataSource,
+    Style,
 };

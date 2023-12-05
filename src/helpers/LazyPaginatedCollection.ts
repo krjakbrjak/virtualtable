@@ -1,4 +1,4 @@
-import { Result, Fetcher } from './types'
+import { Result, DataSource } from './types'
 
 /**
  * @callback LazyPaginatedCollection.retrieve
@@ -27,15 +27,15 @@ export class LazyPaginatedCollection<Type> {
     #pageSize: number;
 
     // A callback to fetch data
-    #retrieve: Fetcher<Type>;
+    #retrieve: DataSource<Type>;
 
     /**
      * Constructs a new collection.
      *
      * @param {number} pageSize Page size
-     * @param {Fetcher<Type>} retrieve A callback to fetch the data
+     * @param {DataSource<Type>} retrieve A data fetcher
      */
-    constructor(pageSize: number, retrieve: Fetcher<Type>) {
+    constructor(pageSize: number, retrieve: DataSource<Type>) {
         this.#pageOffsets = {};
         this.#totalCount = -1;
         this.#pageSize = pageSize;
@@ -89,7 +89,7 @@ export class LazyPaginatedCollection<Type> {
         const offset = this.#pageIndexFor(index);
         // If the page is still missing then fetch it
         if (this.#pageOffsets[offset] === undefined) {
-            this.#pageOffsets[offset] = this.#retrieve(offset, this.#pageSize);
+            this.#pageOffsets[offset] = this.#retrieve.fetch(offset, this.#pageSize);
             return this.#pageOffsets[offset]
                 .then((result) => {
                     this.#totalCount = result.totalCount;
@@ -123,7 +123,7 @@ export class LazyPaginatedCollection<Type> {
         const all = [];
         for (let i = offset; i < index + count; i += this.#pageSize) {
             if (this.#pageOffsets[i] === undefined) {
-                this.#pageOffsets[i] = this.#retrieve(i, this.#pageSize);
+                this.#pageOffsets[i] = this.#retrieve.fetch(i, this.#pageSize);
             }
 
             all.push(this.#pageOffsets[i]);

@@ -14,7 +14,7 @@ import { slideItems } from './helpers/collections';
 import './base.css';
 
 import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
-import { Style, Fetcher } from './helpers/types';
+import { Style, DataSource } from './helpers/types';
 import { Container, Row, Col } from 'react-bootstrap';
 
 interface State<Type> {
@@ -35,18 +35,17 @@ interface Action<Type> {
 interface Args<Type> {
     height: number;
     renderer: (data: Type, classes: string) => ReactNode;
-    fetcher: Fetcher<Type>;
+    fetcher: DataSource<Type>;
     style?: Style;
 }
 
 /**
  * Reducer function for managing state changes.
  *
- * @param {Object} state - The current state of the application.
- * @param {Object} action - The action object that describes the state change.
- * @param {string} action.type - The type of the action.
- * @param {any} [action.data] - Additional data associated with the action.
- * @returns {Object} - The new state after applying the action.
+ * @template {Type}
+ * @param {State} state - The current state of the application.
+ * @param {Action} action - The action object that describes the state change.
+ * @returns {State} - The new state after applying the action.
  */
 function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     switch (action.type) {
@@ -77,7 +76,7 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  * @typedef {Object} VirtualTable.Props
  * @property {number} height A height of the grid.
  * @property {VirtualTable.render} renderer A function to render data.
- * @property {LazyPaginatedCollection.retrieve} fetcher An async function to fetch the data.
+ * @property {DataSource} fetcher A datasource to fetch the data.
  */
 
 /**
@@ -100,13 +99,17 @@ interface Rect {
  */
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
-    const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(new LazyPaginatedCollection<Type>(1, fetcher));
+    const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(() => new LazyPaginatedCollection<Type>(1, fetcher));
     const [rect, setRect] = useState<Rect>({
         x: 0,
         y: 0,
         height: 0,
         width: 0,
     });
+
+    useEffect(() => {
+        setCollection(new LazyPaginatedCollection<Type>(collection.pageSize() ? collection.pageSize() : 1, fetcher));
+    }, [fetcher]);
 
     const [state, dispatch] = useReducer(reducer<Type>, {
         scrollTop: 0,
@@ -129,27 +132,23 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             }
         };
         window.addEventListener('resize', handler);
-        collection.slice(0, 1).then((result) => {
-            dispatch({
-                type: 'loaded',
-                data: {
-                    ...result,
-                    itemCount: collection.count(),
-                },
-            });
-        });
         return function cleanup() {
             window.removeEventListener('resize', handler, true);
         }
     }, []);
 
     useEffect(() => {
-        if (state.itemHeight !== 0) {
-            const offset = Math.floor(state.scrollTop / state.itemHeight);
-            collection.slice(offset, collection.pageSize()).then((result) => {
+        if (collection) {
+            collection.slice(0, collection.pageSize()).then((result) => {
                 dispatch({
                     type: 'loaded',
                     data: {
+                        scrollTop: 0,
+                        itemHeight: 0,
+                        items: [],
+                        offset: 0,
+                        selected: -1,
+                        hovered: -1,
                         ...result,
                         itemCount: collection.count(),
                     },
@@ -161,11 +160,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
     useEffect(() => {
         if (state.itemHeight) {
             const offset = Math.floor(state.scrollTop / state.itemHeight);
-            setCurrentOffset(offset);
             const c = calculatePageCount();
             if (c !== collection.pageSize()) {
-                setCollection(new LazyPaginatedCollection(c, fetcher));
+                setCurrentOffset(0);
+                setCollection(new LazyPaginatedCollection<Type>(c, fetcher));
             } else {
+                setCurrentOffset(offset);
                 collection.slice(offset, collection.pageSize()).then((result) => {
                     if (currentOffset !== result.offset) {
                         dispatch({
@@ -297,7 +297,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
 VirtualTable.propTypes = {
     height: PropTypes.number.isRequired,
     renderer: PropTypes.func.isRequired,
-    fetcher: PropTypes.func.isRequired,
+    fetcher: PropTypes.object.isRequired,
 };
 
 VirtualTable.defaultProps = {

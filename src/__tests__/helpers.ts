@@ -1,9 +1,28 @@
 import { LazyPaginatedCollection } from '../helpers/LazyPaginatedCollection';
 import { slideItems } from '../helpers/collections';
+import { DataSource, Result } from '../helpers/types';
 
 describe('Helpers', () => {
     const COLLECTION_COUNT = 1234;
     const COLLECTION_PAGE_SIZE = 3;
+
+    class TestSource implements DataSource<number> {
+        fetch(index: number, count: number): Promise<Result<number>> {
+            return new Promise((resolve, reject) => {
+                if (index > COLLECTION_COUNT - 1 || index < 0 || count < 0) {
+                    reject(new RangeError());
+                } else {
+                    const tmp = Math.min(count, COLLECTION_COUNT - index);
+                    const items = [...Array(tmp).keys()].map((value) => value + index);
+                    resolve({
+                        from: index,
+                        items,
+                        totalCount: COLLECTION_COUNT,
+                    });
+                }
+            });
+        }
+    }
 
     beforeEach(() => {
     });
@@ -14,21 +33,7 @@ describe('Helpers', () => {
     it('LazyPaginatedCollection', (done) => {
         const collection = new LazyPaginatedCollection<number>(
             COLLECTION_PAGE_SIZE,
-            (index, count) => {
-                return new Promise((resolve, reject) => {
-                    if (index > COLLECTION_COUNT - 1 || index < 0 || count < 0) {
-                        reject(new RangeError());
-                    } else {
-                        const tmp = Math.min(count, COLLECTION_COUNT - index);
-                        const items = [...Array(tmp).keys()].map((value) => value + index);
-                        resolve({
-                            from: index,
-                            items,
-                            totalCount: COLLECTION_COUNT,
-                        });
-                    }
-                });
-            }
+            new TestSource()
         );
 
         const all = [];
