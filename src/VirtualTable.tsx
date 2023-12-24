@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 
-import { slideItems } from './helpers/collections';
+import { slideItems, Page } from './helpers/collections';
 
 import './base.css';
 
@@ -28,11 +28,11 @@ interface Rect {
 }
 
 interface State<Type> {
-    scrollTop: number,
-    itemHeight: number,
-    itemCount: number,
-    items: Array<Type>,
-    offset: number,
+    scrollTop: number;
+    itemHeight: number;
+    itemCount: number;
+    page: Page<Type>;
+    offset: number;
     selected: number;
     hovered: number;
     rect: Rect;
@@ -106,7 +106,10 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         scrollTop: 0,
         itemHeight: 0,
         itemCount: 0,
-        items: [],
+        page: {
+            items: [],
+            offset: 0,
+        },
         offset: 0,
         selected: -1,
         hovered: -1,
@@ -117,8 +120,6 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             width: 0,
         }
     });
-
-    const [currentOffset, setCurrentOffset] = useState(0);
 
     const calculatePageCount = () => 2 * Math.floor(height / state.itemHeight);
 
@@ -147,11 +148,9 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                     data: {
                         scrollTop: 0,
                         itemHeight: 0,
-                        items: [],
-                        offset: 0,
+                        page: result,
                         selected: -1,
                         hovered: -1,
-                        ...result,
                         itemCount: collection.count(),
                     },
                 });
@@ -164,16 +163,26 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             const offset = Math.floor(state.scrollTop / state.itemHeight);
             const c = calculatePageCount();
             if (c !== collection.pageSize()) {
-                setCurrentOffset(0);
+                dispatch({
+                    type: 'loaded',
+                    data: {
+                        offset: 0,
+                    },
+                });
                 setCollection(new LazyPaginatedCollection<Type>(c, fetcher));
-            } else {
-                setCurrentOffset(offset);
+            } else if (state.offset !== offset) {
+                dispatch({
+                    type: 'loaded',
+                    data: {
+                        offset,
+                    },
+                });
                 collection.slice(offset, collection.pageSize()).then((result) => {
-                    if (currentOffset !== result.offset) {
+                    if (state.offset !== result.offset) {
                         dispatch({
                             type: 'loaded',
                             data: {
-                                ...result,
+                                page: result,
                                 itemCount: collection.count(),
                             },
                         });
@@ -220,7 +229,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         }
     });
 
-    if (state.items.length === 0) {
+    if (state.page.items.length === 0) {
         return <div />;
     }
 
@@ -235,10 +244,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                             height,
                         }}
                     >
-                        {generate(currentOffset, slideItems(currentOffset, {
-                            items: state.items,
-                            offset: state.offset,
-                        }))}
+                        {generate(state.offset, slideItems(state.offset, state.page))}
                     </div>
                     <div
                         className='overflow-scroll position-absolute'
