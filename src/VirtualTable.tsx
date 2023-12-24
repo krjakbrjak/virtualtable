@@ -69,7 +69,7 @@ function get_initial_state<T>(): State<T> {
             y: 0,
             height: 0,
             width: 0,
-        }
+        },
     }
 }
 function calculatePageCount(pageHeight: number, itemHeight: number) {
@@ -123,6 +123,7 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
+    const scrolldiv = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(() => new LazyPaginatedCollection<Type>(1, fetcher));
     const [state, dispatch] = useReducer(reducer<Type>, get_initial_state<Type>());
 
@@ -256,6 +257,10 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         }
     });
 
+    let scrollbarWidth = 0;
+    if (scrolldiv && scrolldiv.current) {
+        scrollbarWidth = scrolldiv.current.offsetWidth - scrolldiv.current.children[0].offsetWidth;
+    }
 
     return (
         <Container>
@@ -279,11 +284,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                         {state.itemHeight !== 0 && generate(state.offset, slideItems(state.offset, state.page))}
                     </div>
                     <div
+                        ref={scrolldiv}
                         className='overflow-scroll position-absolute'
                         style={{
                             top: state.rect.y,
                             left: state.rect.x,
-                            width: state.rect.width,
+                            width: state.rect.width + scrollbarWidth,
                             height: state.rect.height,
                         }}
                         onMouseMove={(e) => {
