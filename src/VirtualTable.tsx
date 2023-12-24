@@ -17,6 +17,16 @@ import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
 import { Style, DataSource } from './helpers/types';
 import { Container, Row, Col } from 'react-bootstrap';
 
+/**
+ * Represent the rectangular.
+ */
+interface Rect {
+    x: number;
+    y: number;
+    height: number;
+    width: number;
+}
+
 interface State<Type> {
     scrollTop: number,
     itemHeight: number,
@@ -25,6 +35,7 @@ interface State<Type> {
     offset: number,
     selected: number;
     hovered: number;
+    rect: Rect;
 }
 
 interface Action<Type> {
@@ -50,13 +61,9 @@ interface Args<Type> {
 function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
     switch (action.type) {
         case 'scroll':
-            return { ...state, ...action.data };
         case 'render':
-            return { ...state, ...action.data };
         case 'loaded':
-            return { ...state, ...action.data };
         case 'click':
-            return { ...state, ...action.data };
         case 'hover':
             return { ...state, ...action.data };
         default:
@@ -80,16 +87,6 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  */
 
 /**
- * Represent the rectangular.
- */
-interface Rect {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-}
-
-/**
  * @description VirtualTable component.
  *
  * Displays a large set of data (with a low memory usage).
@@ -100,12 +97,6 @@ interface Rect {
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(() => new LazyPaginatedCollection<Type>(1, fetcher));
-    const [rect, setRect] = useState<Rect>({
-        x: 0,
-        y: 0,
-        height: 0,
-        width: 0,
-    });
 
     useEffect(() => {
         setCollection(new LazyPaginatedCollection<Type>(collection.pageSize() ? collection.pageSize() : 1, fetcher));
@@ -119,6 +110,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         offset: 0,
         selected: -1,
         hovered: -1,
+        rect: {
+            x: 0,
+            y: 0,
+            height: 0,
+            width: 0,
+        }
     });
 
     const [currentOffset, setCurrentOffset] = useState(0);
@@ -128,7 +125,12 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
     useEffect(() => {
         const handler = () => {
             if (ref && ref.current) {
-                setRect(ref.current.getBoundingClientRect());
+                dispatch({
+                    type: 'render',
+                    data: {
+                        rect: ref.current.getBoundingClientRect(),
+                    },
+                });
             }
         };
         window.addEventListener('resize', handler);
@@ -206,11 +208,11 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             ref.current.scrollTop = state.scrollTop % state.itemHeight;
             if (ref.current.children && ref.current.children.length) {
                 if (ref.current.children[0].clientHeight !== state.itemHeight) {
-                    setRect(ref.current.getBoundingClientRect());
                     dispatch({
                         type: 'render',
                         data: {
                             itemHeight: ref.current.children[0].clientHeight,
+                            rect: ref.current.getBoundingClientRect(),
                         },
                     });
                 }
@@ -241,10 +243,10 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                     <div
                         className='overflow-scroll position-absolute'
                         style={{
-                            top: rect.y,
-                            left: rect.x,
-                            width: rect.width,
-                            height: rect.height,
+                            top: state.rect.y,
+                            left: state.rect.x,
+                            width: state.rect.width,
+                            height: state.rect.height,
                         }}
                         onMouseMove={(e) => {
                             const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
