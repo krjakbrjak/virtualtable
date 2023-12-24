@@ -2,7 +2,7 @@
  * Represent a page.
  * @typedef {Object} Slice
  */
-interface Page<Type> {
+export interface Page<Type> {
     /**
      * Page items
      */
