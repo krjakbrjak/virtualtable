@@ -285,7 +285,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                     </div>
                     <div
                         ref={scrolldiv}
-                        className='overflow-scroll position-absolute'
+                        className='overflow-auto position-absolute'
                         style={{
                             top: state.rect.y,
                             left: state.rect.x,
