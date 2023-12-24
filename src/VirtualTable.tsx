@@ -28,6 +28,7 @@ interface Rect {
 }
 
 interface State<Type> {
+    ready: boolean;
     scrollTop: number;
     itemHeight: number;
     itemCount: number;
@@ -48,6 +49,31 @@ interface Args<Type> {
     renderer: (data: Type, classes: string) => ReactNode;
     fetcher: DataSource<Type>;
     style?: Style;
+}
+
+function get_initial_state<T>(): State<T> {
+    return {
+        ready: false,
+        scrollTop: 0,
+        itemHeight: 0,
+        itemCount: 0,
+        page: {
+            items: [],
+            offset: 0,
+        },
+        offset: 0,
+        selected: -1,
+        hovered: -1,
+        rect: {
+            x: 0,
+            y: 0,
+            height: 0,
+            width: 0,
+        }
+    }
+}
+function calculatePageCount(pageHeight: number, itemHeight: number) {
+    return 2 * Math.floor(pageHeight / itemHeight);
 }
 
 /**
@@ -96,103 +122,9 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
  */
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
+    const invisible = useRef(null);
     const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(() => new LazyPaginatedCollection<Type>(1, fetcher));
-
-    useEffect(() => {
-        setCollection(new LazyPaginatedCollection<Type>(collection.pageSize() ? collection.pageSize() : 1, fetcher));
-    }, [fetcher]);
-
-    const [state, dispatch] = useReducer(reducer<Type>, {
-        scrollTop: 0,
-        itemHeight: 0,
-        itemCount: 0,
-        page: {
-            items: [],
-            offset: 0,
-        },
-        offset: 0,
-        selected: -1,
-        hovered: -1,
-        rect: {
-            x: 0,
-            y: 0,
-            height: 0,
-            width: 0,
-        }
-    });
-
-    const calculatePageCount = () => 2 * Math.floor(height / state.itemHeight);
-
-    useEffect(() => {
-        const handler = () => {
-            if (ref && ref.current) {
-                dispatch({
-                    type: 'render',
-                    data: {
-                        rect: ref.current.getBoundingClientRect(),
-                    },
-                });
-            }
-        };
-        window.addEventListener('resize', handler);
-        return function cleanup() {
-            window.removeEventListener('resize', handler, true);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (collection) {
-            collection.slice(0, collection.pageSize()).then((result) => {
-                dispatch({
-                    type: 'loaded',
-                    data: {
-                        scrollTop: 0,
-                        itemHeight: 0,
-                        page: result,
-                        selected: -1,
-                        hovered: -1,
-                        itemCount: collection.count(),
-                    },
-                });
-            });
-        }
-    }, [collection]);
-
-    useEffect(() => {
-        if (state.itemHeight) {
-            const offset = Math.floor(state.scrollTop / state.itemHeight);
-            const c = calculatePageCount();
-            if (c !== collection.pageSize()) {
-                dispatch({
-                    type: 'loaded',
-                    data: {
-                        offset: 0,
-                    },
-                });
-                setCollection(new LazyPaginatedCollection<Type>(c, fetcher));
-            } else if (state.offset !== offset) {
-                dispatch({
-                    type: 'loaded',
-                    data: {
-                        offset,
-                    },
-                });
-                collection.slice(offset, collection.pageSize()).then((result) => {
-                    if (state.offset !== result.offset) {
-                        dispatch({
-                            type: 'loaded',
-                            data: {
-                                page: result,
-                                itemCount: collection.count(),
-                            },
-                        });
-                    }
-                });
-            }
-        }
-    }, [
-        state,
-    ]);
+    const [state, dispatch] = useReducer(reducer<Type>, get_initial_state<Type>());
 
     const generate = (offset: number, d: Array<Type>) => {
         const ret = [];
@@ -212,26 +144,118 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         return ret;
     };
 
+
+    // A callback to update the table view in case of resize event.
+    const handler = () => {
+        let itemHeight = state.itemHeight;
+        let rect = state.rect;
+        if (invisible && invisible.current) {
+            itemHeight = invisible.current.clientHeight;
+        }
+        if (ref && ref.current) {
+            rect = ref.current.getBoundingClientRect();
+        }
+
+        // Update the size of the widget and the size of the items
+        dispatch({
+            type: 'render',
+            data: {
+                rect,
+                itemHeight,
+                scrollTop: 0,
+                selected: -1,
+                hovered: -1,
+                page: {
+                    items: [],
+                    offset: 0,
+                }
+            },
+        });
+
+        // If the item's height is already known, then update the lazy collection
+        // and re-fetch the items.
+        if (itemHeight) {
+            const new_collection = new LazyPaginatedCollection<Type>(calculatePageCount(rect.height, itemHeight), fetcher);
+            new_collection.slice(0, new_collection.pageSize()).then((result) => {
+                dispatch({
+                    type: 'loaded',
+                    data: {
+                        page: result,
+                        itemCount: new_collection.count(),
+                    },
+                });
+                setCollection(new_collection);
+            });
+        }
+    };
+
+    // Effect that updates the lazy collection in case fetcher gets updated
+    useEffect(() => {
+        setCollection(new LazyPaginatedCollection<Type>(collection.pageSize() ? collection.pageSize() : 1, fetcher));
+    }, [fetcher]);
+
+    // Effect to fetch the first item (to draw a fake item to get the true size if the item)
+    // and the total number of items.
+    useEffect(() => {
+        collection.slice(0, collection.pageSize()).then((result) => {
+            dispatch({
+                type: 'loaded',
+                data: {
+                    ready: true,
+                    page: result,
+                    itemCount: collection.count(),
+                },
+            });
+        });
+
+        window.addEventListener('resize', handler);
+        return function cleanup() {
+            window.removeEventListener('resize', handler, true);
+        }
+    }, []);
+
+    // Effect to run on all state updates.
+    useEffect(() => {
+        if (state.ready) {
+            if (state.itemHeight) {
+                const offset = Math.floor(state.scrollTop / state.itemHeight);
+                const c = calculatePageCount(height, state.itemHeight);
+                if (c === collection.pageSize() && state.offset !== offset) {
+                    // Update the offset first and then start fetching the necessary items.
+                    // This ensures a non-interruptive user experience, where all the
+                    // required data is already available.
+                    dispatch({
+                        type: 'loaded',
+                        data: {
+                            offset,
+                        },
+                    });
+                    collection.slice(offset, collection.pageSize()).then((result) => {
+                        if (state.offset !== result.offset) {
+                            dispatch({
+                                type: 'loaded',
+                                data: {
+                                    page: result,
+                                    itemCount: collection.count(),
+                                },
+                            });
+                        }
+                    });
+                }
+            } else {
+                handler();
+            }
+        }
+    }, [state]);
+
+    // Effect to run on each render to make sure that the scrolltop of
+    // the item container is up-to-date.
     useEffect(() => {
         if (ref.current) {
             ref.current.scrollTop = state.scrollTop % state.itemHeight;
-            if (ref.current.children && ref.current.children.length) {
-                if (ref.current.children[0].clientHeight !== state.itemHeight) {
-                    dispatch({
-                        type: 'render',
-                        data: {
-                            itemHeight: ref.current.children[0].clientHeight,
-                            rect: ref.current.getBoundingClientRect(),
-                        },
-                    });
-                }
-            }
         }
     });
 
-    if (state.page.items.length === 0) {
-        return <div />;
-    }
 
     return (
         <Container>
@@ -244,7 +268,15 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                             height,
                         }}
                     >
-                        {generate(state.offset, slideItems(state.offset, state.page))}
+                        {state.ready && state.itemHeight === 0 &&
+                            <div ref={invisible} style={{
+                                'visibility': 'hidden',
+                                position: 'absolute',
+                                pointerEvents: 'none'
+                            }}>
+                                {renderer(state.page.items[0], '')}
+                            </div>}
+                        {state.itemHeight !== 0 && generate(state.offset, slideItems(state.offset, state.page))}
                     </div>
                     <div
                         className='overflow-scroll position-absolute'
