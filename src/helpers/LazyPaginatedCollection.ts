@@ -65,34 +65,6 @@ export class LazyPaginatedCollection<Type> {
     #pageIndexFor = (index: number) => (index - (index % this.#pageSize));
 
     /**
-     * Returns an items at index.
-     *
-     * @async
-     * @param {number} index An index of an item to retrieve.
-     * @returns Promise.<number | RangeError>
-     */
-    at(index: number) {
-        // Invalid offset
-        if (index < 0) {
-            return Promise.reject(new RangeError());
-        }
-
-        const offset = this.#pageIndexFor(index);
-        // If the page is still missing then fetch it
-        if (this.#pageOffsets[offset] === undefined) {
-            this.#pageOffsets[offset] = this.#retrieve.fetch(offset, this.#pageSize);
-            return this.#pageOffsets[offset]
-                .then((result) => {
-                    this.#totalCount = result.totalCount;
-                    return Promise.resolve(result.items[index % this.#pageSize]);
-                });
-        }
-
-        return this.#pageOffsets[offset]
-            .then((result) => Promise.resolve(result.items[index % this.#pageSize]));
-    }
-
-    /**
      * Returns an slice of a collection.
      *
      * @async
