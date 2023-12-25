@@ -98,26 +98,10 @@ function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
 };
 
 /**
- * @callback VirtualTable.render
- * @param {Object} object Data to draw.
- * @returns {String | React.Component}
- */
-
-/**
- * @description Props for {@link VirtualTable} component.
- *
- * @typedef {Object} VirtualTable.Props
- * @property {number} height A height of the grid.
- * @property {VirtualTable.render} renderer A function to render data.
- * @property {DataSource} fetcher A datasource to fetch the data.
- */
-
-/**
  * @description VirtualTable component.
  *
  * Displays a large set of data (with a low memory usage).
  *
- * @param {VirtualTable.Props} props Properties
  * @component
  */
 export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
@@ -344,6 +328,7 @@ VirtualTable.propTypes = {
     height: PropTypes.number.isRequired,
     renderer: PropTypes.func.isRequired,
     fetcher: PropTypes.object.isRequired,
+    style: PropTypes.object,
 };
 
 VirtualTable.defaultProps = {

@@ -1,14 +1,6 @@
+import { Page } from './collections';
 import { Result, DataSource } from './types'
 
-/**
- * @callback LazyPaginatedCollection.retrieve
- * @async
- * @param {number} offset An offset (the index of the first item to fetch).
- * @param {number} count A number of items to fetch.
- * @returns Promise.<Array<Object> | RangeError>
- */
-
-// retrieve must throw RangeError in case requested index is oob
 /**
  * Calss representing a lazy paginated collection of data.
  */
@@ -20,13 +12,12 @@ export class LazyPaginatedCollection<Type> {
     // requested equals #pageSize property.
     #pageOffsets: { [id: number]: Promise<Result<Type>> };
 
-    // Totsl number of items in a collection. -1 if collection was not loaded.
+    // Total number of items in a collection. -1 if collection was not loaded.
     #totalCount: number;
 
     // Corresponds to the (at most) number of items fetched at each reauest.
     #pageSize: number;
 
-    // A callback to fetch data
     #retrieve: DataSource<Type>;
 
     /**
@@ -47,7 +38,7 @@ export class LazyPaginatedCollection<Type> {
      *
      * @returns {number}
      */
-    pageSize() {
+    pageSize(): number {
         return this.#pageSize;
     }
 
@@ -57,7 +48,7 @@ export class LazyPaginatedCollection<Type> {
      * @returns {number} A number of items in a collection
      * (0 if a collection is empty or has not been loaded yet)
      */
-    count() {
+    count(): number {
         if (this.#totalCount <= 0) {
             return 0;
         }
@@ -74,42 +65,14 @@ export class LazyPaginatedCollection<Type> {
     #pageIndexFor = (index: number) => (index - (index % this.#pageSize));
 
     /**
-     * Returns an items at index.
-     *
-     * @async
-     * @param {number} index An index of an item to retrieve.
-     * @returns Promise.<number | RangeError>
-     */
-    at(index: number) {
-        // Invalid offset
-        if (index < 0) {
-            return Promise.reject(new RangeError());
-        }
-
-        const offset = this.#pageIndexFor(index);
-        // If the page is still missing then fetch it
-        if (this.#pageOffsets[offset] === undefined) {
-            this.#pageOffsets[offset] = this.#retrieve.fetch(offset, this.#pageSize);
-            return this.#pageOffsets[offset]
-                .then((result) => {
-                    this.#totalCount = result.totalCount;
-                    return Promise.resolve(result.items[index % this.#pageSize]);
-                });
-        }
-
-        return this.#pageOffsets[offset]
-            .then((result) => Promise.resolve(result.items[index % this.#pageSize]));
-    }
-
-    /**
      * Returns an slice of a collection.
      *
      * @async
      * @param {number} index An index of the first item to fetch.
      * @param {number} count Max number of items to fetch.
-     * @returns Promise.<Array.<Object> | RangeError>
+     * @returns {Promise<Page<Type>>}
      */
-    async slice(index: number, count: number) {
+    async slice(index: number, count: number): Promise<Page<Type>> {
         // Invalid offset or count => an empty list
         if (index < 0 || count <= 0) {
             return Promise.resolve({

@@ -37,25 +37,20 @@ describe('Helpers', () => {
         );
 
         const all = [];
-        all.push(collection.at(1021367)
+        all.push(collection.slice(1021367, 1)
             .then((value) => {
-                expect(true).toBe(false);
-            })
-            .catch((err) => {
-                expect(err).toBeInstanceOf(RangeError);
+                expect(value.items.length).toBe(0);
             }));
 
-        all.push(collection.at(-2)
+        all.push(collection.slice(-2, 1)
             .then((value) => {
-                expect(true).toBe(false);
-            })
-            .catch((err) => {
-                expect(err).toBeInstanceOf(RangeError);
+                expect(value.items.length).toBe(0);
             }));
 
-        all.push(collection.at(254)
+        all.push(collection.slice(254, 1)
             .then((value) => {
-                expect(value).toBe(254);
+                expect(value.items[0]).toBe(254);
+                expect(value.offset).toBe(254);
             }));
 
         all.push(collection.slice(234, 10)

@@ -1,6 +1,8 @@
 /**
  * Represent a page.
- * @typedef {Object} Slice
+ *
+ * @typedef {Object} Page
+ * @template {Type}
  */
 export interface Page<Type> {
     /**
@@ -26,11 +28,12 @@ export interface Page<Type> {
  *
  * For {3, [0, 1, 2]} and 7 => [undefined, undefined, undefined].
  *
+ * @template {Type}
  * @param {number} currentOffset A new offset
- * @param {Slice} slice A slice of the collection
- * @returns Array.<Object>
+ * @param {Page} page A page
+ * @returns {Page<Type>}
  */
-export function slideItems<Type>(currentOffset: number, { items, offset}: Page<Type>) {
+export function slideItems<Type>(currentOffset: number, { items, offset }: Page<Type>) {
     const count = items.length;
     // Nothing to do
     if (offset === currentOffset) {
