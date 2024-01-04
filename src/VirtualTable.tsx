@@ -5,44 +5,24 @@
  */
 
 import React, {
-    useReducer, useEffect, useState, useRef, ReactNode,
+    useReducer, useEffect, useRef, ReactNode,
 } from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
-import { slideItems, Page } from './helpers/collections';
+import { fetch_items, get_items } from './helpers/collections';
+
+import {
+    reducer,
+    Selection,
+    SCROLL, SELECT, INITIALIZED,
+    INITIALIZE, LOADED, LOAD, RESET
+} from './helpers/reducer';
+import { get_initial_state, get_total_count } from './helpers/state';
+import { DataSource, Status, Style, Data, Pages } from './helpers/types';
+import SizeChecker from './SizeChecker';
 
 import './base.css';
-
-import { LazyPaginatedCollection } from './helpers/LazyPaginatedCollection';
-import { Style, DataSource } from './helpers/types';
-import { Container, Row, Col } from 'react-bootstrap';
-
-/**
- * Represent the rectangular.
- */
-interface Rect {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-}
-
-interface State<Type> {
-    ready: boolean;
-    scrollTop: number;
-    itemHeight: number;
-    itemCount: number;
-    page: Page<Type>;
-    offset: number;
-    selected: number;
-    hovered: number;
-    rect: Rect;
-}
-
-interface Action<Type> {
-    type: 'scroll' | 'render' | 'loaded' | 'click' | 'hover';
-    data: Partial<State<Type>>
-}
 
 interface Args<Type> {
     height: number;
@@ -51,51 +31,9 @@ interface Args<Type> {
     style?: Style;
 }
 
-function get_initial_state<T>(): State<T> {
-    return {
-        ready: false,
-        scrollTop: 0,
-        itemHeight: 0,
-        itemCount: 0,
-        page: {
-            items: [],
-            offset: 0,
-        },
-        offset: 0,
-        selected: -1,
-        hovered: -1,
-        rect: {
-            x: 0,
-            y: 0,
-            height: 0,
-            width: 0,
-        },
-    }
-}
 function calculatePageCount(pageHeight: number, itemHeight: number) {
     return 2 * Math.floor(pageHeight / itemHeight);
 }
-
-/**
- * Reducer function for managing state changes.
- *
- * @template {Type}
- * @param {State} state - The current state of the application.
- * @param {Action} action - The action object that describes the state change.
- * @returns {State} - The new state after applying the action.
- */
-function reducer<Type>(state: State<Type>, action: Action<Type>): State<Type> {
-    switch (action.type) {
-        case 'scroll':
-        case 'render':
-        case 'loaded':
-        case 'click':
-        case 'hover':
-            return { ...state, ...action.data };
-        default:
-            return state;
-    }
-};
 
 /**
  * @description VirtualTable component.
@@ -108,10 +46,16 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
     const ref = useRef(null);
     const invisible = useRef(null);
     const scrolldiv = useRef(null);
-    const [collection, setCollection] = useState<LazyPaginatedCollection<Type>>(() => new LazyPaginatedCollection<Type>(1, fetcher));
-    const [state, dispatch] = useReducer(reducer<Type>, get_initial_state<Type>());
+    const [state, dispatch] = useReducer(reducer<Type>, {}, get_initial_state<Type>);
 
-    const generate = (offset: number, d: Array<Type>) => {
+    const get_height = () => {
+        if (invisible && invisible.current) {
+            return invisible.current.height();
+        }
+        return 0;
+    }
+
+    const generate = (offset: number, d: Array<Type | undefined>) => {
         const ret = [];
 
         for (let i = 0; i < d.length; i += 1) {
@@ -124,120 +68,70 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             } else if (i + offset === state.hovered && style) {
                 className = `${className} ${style.hover}`;
             }
-            ret.push(<div key={i + offset}>{renderer(d[i], className)}</div>);
+            ret.push(<div key={i}>{renderer(d[i], className)}</div>);
         }
         return ret;
     };
 
-
-    // A callback to update the table view in case of resize event.
-    const handler = () => {
-        let itemHeight = state.itemHeight;
-        let rect = state.rect;
-        if (invisible && invisible.current) {
-            itemHeight = invisible.current.clientHeight;
-        }
-        if (ref && ref.current) {
-            rect = ref.current.getBoundingClientRect();
-        }
-
-        // Update the size of the widget and the size of the items
-        dispatch({
-            type: 'render',
-            data: {
-                rect,
-                itemHeight,
-                scrollTop: 0,
-                selected: -1,
-                hovered: -1,
-                page: {
-                    items: [],
-                    offset: 0,
-                }
-            },
-        });
-
-        // If the item's height is already known, then update the lazy collection
-        // and re-fetch the items.
-        if (itemHeight) {
-            const new_collection = new LazyPaginatedCollection<Type>(calculatePageCount(rect.height, itemHeight), fetcher);
-            new_collection.slice(0, new_collection.pageSize()).then((result) => {
-                dispatch({
-                    type: 'loaded',
-                    data: {
-                        page: result,
-                        itemCount: new_collection.count(),
-                    },
-                });
-                setCollection(new_collection);
-            });
-        }
-    };
-
     // Effect that updates the lazy collection in case fetcher gets updated
     useEffect(() => {
-        setCollection(new LazyPaginatedCollection<Type>(collection.pageSize() ? collection.pageSize() : 1, fetcher));
-    }, [fetcher]);
-
-    // Effect to fetch the first item (to draw a fake item to get the true size if the item)
-    // and the total number of items.
-    useEffect(() => {
-        collection.slice(0, collection.pageSize()).then((result) => {
-            dispatch({
-                type: 'loaded',
-                data: {
-                    ready: true,
-                    page: result,
-                    itemCount: collection.count(),
-                },
-            });
+        dispatch({
+            type: RESET,
         });
-
-        window.addEventListener('resize', handler);
-        return function cleanup() {
-            window.removeEventListener('resize', handler, true);
-        }
-    }, []);
+    }, [fetcher]);
 
     // Effect to run on all state updates.
     useEffect(() => {
-        if (state.ready) {
-            if (state.itemHeight) {
-                const offset = Math.floor(state.scrollTop / state.itemHeight);
-                const c = calculatePageCount(height, state.itemHeight);
-                if (c === collection.pageSize() && state.offset !== offset) {
-                    // Update the offset first and then start fetching the necessary items.
-                    // This ensures a non-interruptive user experience, where all the
-                    // required data is already available.
+        const itemHeight = get_height();
+        switch (state.status) {
+            case Status.Loading:
+                if (itemHeight) {
                     dispatch({
-                        type: 'loaded',
-                        data: {
-                            offset,
-                        },
-                    });
-                    collection.slice(offset, collection.pageSize()).then((result) => {
-                        if (state.offset !== result.offset) {
-                            dispatch({
-                                type: 'loaded',
-                                data: {
-                                    page: result,
-                                    itemCount: collection.count(),
-                                },
-                            });
-                        }
+                        type: INITIALIZED,
                     });
                 }
-            } else {
-                handler();
-            }
+                break;
+            case Status.Loaded:
+                if (itemHeight) {
+                    const offset = Math.floor(state.scrollTop / itemHeight);
+                    const c = calculatePageCount(height, itemHeight);
+                    let data_pages: Pages<Type> = state.data ? state.data.pages : {};
+                    const page_index = Math.floor(offset / c);
+                    for (let i = -1; i < 2; ++i) {
+                        if (page_index + i > -1 && data_pages[page_index + i] === undefined) {
+                            dispatch({
+                                type: LOAD,
+                                payload: {
+                                    pages: [page_index + i],
+                                },
+                            });
+                            fetch_items(page_index + i, 1, c, fetcher).then((result) => {
+                                dispatch({
+                                    type: LOADED,
+                                    payload: {
+                                        data: result,
+                                    },
+                                });
+                            });
+                        }
+                    }
+                }
+                break;
+            case Status.Unavailable:
+            case Status.None:
+                dispatch({
+                    type: INITIALIZE,
+                });
+                break;
         }
     }, [state]);
 
     // Effect to run on each render to make sure that the scrolltop of
     // the item container is up-to-date.
     useEffect(() => {
-        if (ref.current) {
-            ref.current.scrollTop = state.scrollTop % state.itemHeight;
+        const itemHeight = get_height();
+        if (ref.current && itemHeight) {
+            ref.current.scrollTop = state.scrollTop % itemHeight;
         }
     });
 
@@ -247,80 +141,89 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
     }
 
     return (
-        <Container>
-            <Row>
-                <Col>
-                    <div
-                        ref={ref}
-                        className='overflow-hidden'
-                        style={{
-                            height,
-                        }}
-                    >
-                        {state.ready && state.itemHeight === 0 &&
-                            <div ref={invisible} style={{
-                                'visibility': 'hidden',
-                                position: 'absolute',
-                                pointerEvents: 'none'
-                            }}>
-                                {renderer(state.page.items[0], '')}
-                            </div>}
-                        {state.itemHeight !== 0 && generate(state.offset, slideItems(state.offset, state.page))}
-                    </div>
-                    <div
-                        ref={scrolldiv}
-                        className='overflow-auto position-absolute'
-                        style={{
-                            top: state.rect.y,
-                            left: state.rect.x,
-                            width: state.rect.width + scrollbarWidth,
-                            height: state.rect.height,
-                        }}
-                        onMouseMove={(e) => {
-                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                            const childElement = ref.current.children[index - state.offset];
-                            if (childElement) {
-                                const event = new Event('mouseover', { bubbles: true, cancelable: false });
-                                childElement.children[0].dispatchEvent(event);
+        <>
+            <SizeChecker ref={invisible} on_ready={() => dispatch({
+                type: INITIALIZED,
+            })} fetcher={fetcher} renderer={renderer} />
+            <Container className='position-relative' style={{ padding: 0, height, }}>
+                <Row style={{ padding: 0, height: '100%' }}>
+                    <Col style={{ padding: 0, height: '100%' }} className='position-relative'>
+                        <div
+                            ref={ref}
+                            className='overflow-hidden'
+                            style={{
+                                padding: 0,
+                                top: 0,
+                                left: 0,
+                                bottom: 0,
+                                width: `calc(100% - ${scrollbarWidth}px)`,
+                                height: '100%',
+                            }}
+                        >
+                            {get_height() !== 0 && state.data && generate(Math.floor(state.scrollTop / get_height()), get_items(Math.floor(state.scrollTop / get_height()), state.data))}
+                        </div>
+                        <div
+                            ref={scrolldiv}
+                            className='overflow-auto position-absolute'
+                            style={{
+                                padding: 0,
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                            }}
+                            onMouseMove={(e) => {
+                                const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
+                                const offset = Math.floor(state.scrollTop / get_height());
+                                const index = position + offset;
+                                const childElement = ref.current.children[index - Math.floor(state.scrollTop / get_height())];
+                                if (childElement) {
+                                    const event = new Event('mouseover', { bubbles: true, cancelable: false });
+                                    childElement.children[0].dispatchEvent(event);
+                                    dispatch({
+                                        type: SELECT,
+                                        payload: {
+                                            selection: Selection.HOVER,
+                                            index,
+                                        },
+                                    });
+                                }
+                            }}
+                            onClick={(e) => {
+                                const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
+                                const offset = Math.floor(state.scrollTop / get_height());
+                                const index = position + offset;
+                                const childElement = ref.current.children[index - Math.floor(state.scrollTop / get_height())];
+                                if (childElement) {
+                                    const clickEvent = new Event('click', { bubbles: true, cancelable: false });
+                                    childElement.children[0].dispatchEvent(clickEvent);
+                                    dispatch({
+                                        type: SELECT,
+                                        payload: {
+                                            selection: Selection.CLICK,
+                                            index,
+                                        },
+                                    });
+                                }
+                            }}
+                            onScroll={(e) => {
                                 dispatch({
-                                    type: 'hover',
-                                    data: {
-                                        hovered: index,
+                                    type: SCROLL,
+                                    payload: {
+                                        scrollTop: (e.target as HTMLElement).scrollTop,
                                     },
                                 });
-                            }
-                        }}
-                        onClick={(e) => {
-                            const index = Math.floor((e.clientY + state.scrollTop - ref.current.getBoundingClientRect().top) / state.itemHeight);
-                            const childElement = ref.current.children[index - state.offset];
-                            if (childElement) {
-                                const clickEvent = new Event('click', { bubbles: true, cancelable: false });
-                                childElement.children[0].dispatchEvent(clickEvent);
-                                dispatch({
-                                    type: 'click',
-                                    data: {
-                                        selected: index,
-                                    },
-                                });
-                            }
-                        }}
-                        onScroll={(e) => {
-                            dispatch({
-                                type: 'scroll',
-                                data: {
-                                    scrollTop: (e.target as HTMLElement).scrollTop,
-                                },
-                            });
-                        }}
-                    >
-                        <div style={{
-                            height: `${state.itemCount * state.itemHeight}px`, width: '100%',
-                        }}
-                        />
-                    </div>
-                </Col>
-            </Row>
-        </Container>
+                            }}
+                        >
+                            <div style={{
+                                height: `${get_total_count(state) * get_height()}px`, width: '100%',
+                            }}
+                            />
+                        </div>
+                    </Col>
+                </Row>
+            </Container>
+        </>
     );
 }
 
