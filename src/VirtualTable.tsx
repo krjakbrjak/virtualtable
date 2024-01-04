@@ -25,7 +25,6 @@ import SizeChecker from './SizeChecker';
 import './base.css';
 
 interface Args<Type> {
-    height: number;
     renderer: (data: Type, classes: string) => ReactNode;
     fetcher: DataSource<Type>;
     style?: Style;
@@ -42,7 +41,7 @@ function calculatePageCount(pageHeight: number, itemHeight: number) {
  *
  * @component
  */
-export default function VirtualTable<Type>({ height, renderer, fetcher, style }: Args<Type>): JSX.Element {
+export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
     const scrolldiv = useRef(null);
@@ -94,7 +93,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
             case Status.Loaded:
                 if (itemHeight) {
                     const offset = Math.floor(state.scrollTop / itemHeight);
-                    const c = calculatePageCount(height, itemHeight);
+                    const c = calculatePageCount(ref.current?.clientHeight, itemHeight);
                     let data_pages: Pages<Type> = state.data ? state.data.pages : {};
                     const page_index = Math.floor(offset / c);
                     for (let i = -1; i < 2; ++i) {
@@ -126,6 +125,19 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         }
     }, [state]);
 
+    useEffect(() => {
+        const handler = () => {
+            dispatch({
+                type: RESET,
+            });
+        };
+
+        window.addEventListener('resize', handler);
+        return () => {
+            window.removeEventListener('resize', handler);
+        }
+    }, []);
+
     // Effect to run on each render to make sure that the scrolltop of
     // the item container is up-to-date.
     useEffect(() => {
@@ -135,18 +147,13 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
         }
     });
 
-    let scrollbarWidth = 0;
-    if (scrolldiv && scrolldiv.current) {
-        scrollbarWidth = scrolldiv.current.offsetWidth - scrolldiv.current.children[0].offsetWidth;
-    }
-
     return (
         <>
             <SizeChecker ref={invisible} on_ready={() => dispatch({
                 type: INITIALIZED,
             })} fetcher={fetcher} renderer={renderer} />
-            <Container className='position-relative' style={{ padding: 0, height, }}>
-                <Row style={{ padding: 0, height: '100%' }}>
+            <Container className='position-relative' style={{ padding: 0, height: '100%', width: '100%'}}>
+                <Row style={{ padding: 0, height: '100%', width: '100%' }}>
                     <Col style={{ padding: 0, height: '100%' }} className='position-relative'>
                         <div
                             ref={ref}
@@ -156,7 +163,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                                 top: 0,
                                 left: 0,
                                 bottom: 0,
-                                width: `calc(100% - ${scrollbarWidth}px)`,
+                                width: `calc(100% - ${scrolldiv.current?.offsetWidth - scrolldiv.current?.children[0].offsetWidth}px)`,
                                 height: '100%',
                             }}
                         >
@@ -164,7 +171,7 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
                         </div>
                         <div
                             ref={scrolldiv}
-                            className='overflow-auto position-absolute'
+                            className={`overflow-${state.data?.pageSize >= state.data?.totalCount ? 'auto' : 'y-scroll'} position-absolute`}
                             style={{
                                 padding: 0,
                                 top: 0,
@@ -228,7 +235,6 @@ export default function VirtualTable<Type>({ height, renderer, fetcher, style }:
 }
 
 VirtualTable.propTypes = {
-    height: PropTypes.number.isRequired,
     renderer: PropTypes.func.isRequired,
     fetcher: PropTypes.object.isRequired,
     style: PropTypes.object,
