@@ -39,7 +39,7 @@ function App() {
             }} />
             <Row>
                 <Col />
-                <Col>
+                <Col style={{height: 400}}>
                     <VirtualTable<number>
                         style={style}
                         renderer={(i, classes) => <div
@@ -50,7 +50,6 @@ function App() {
                         >
                             {i !== undefined ? i : 'unknown'}
                         </div>}
-                        height={400}
                         fetcher={new Fetcher()}
                     />
                 </Col>
