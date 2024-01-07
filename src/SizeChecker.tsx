@@ -12,16 +12,6 @@ import './base.css';
 
 import { DataSource, } from './helpers/types';
 
-/**
- * Represent the rectangular.
- */
-interface Rect {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-}
-
 interface Args<Type> {
     renderer: (data: Type) => ReactNode;
     fetcher: DataSource<Type>;
