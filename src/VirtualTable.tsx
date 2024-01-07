@@ -7,7 +7,7 @@
 import React, {
     useReducer, useEffect, useRef, ReactNode,
 } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Table } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 import { fetch_items, get_items } from './helpers/collections';
@@ -25,9 +25,10 @@ import SizeChecker from './SizeChecker';
 import './base.css';
 
 interface Args<Type> {
-    renderer: (data: Type, classes: string) => ReactNode;
+    renderer: (data: Type) => ReactNode;
     fetcher: DataSource<Type>;
     style?: Style;
+    striped?: boolean;
 }
 
 function calculatePageCount(pageHeight: number, itemHeight: number) {
@@ -41,7 +42,7 @@ function calculatePageCount(pageHeight: number, itemHeight: number) {
  *
  * @component
  */
-export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Type>): JSX.Element {
+export default function VirtualTable<Type>({ renderer, fetcher, style, striped }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
     const scrolldiv = useRef(null);
@@ -67,7 +68,18 @@ export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Ty
             } else if (i + offset === state.hovered && style) {
                 className = `${className} ${style.hover}`;
             }
-            ret.push(<div key={i}>{renderer(d[i], className)}</div>);
+            ret.push(<tr key={i} style={{
+                padding: 0,
+                width: '100%',
+            }}>
+                <td className={className} style={{
+                    padding: 0,
+                    width: '100%',
+                    textOverflow: 'ellipsis',
+                }}>
+                    {renderer(d[i])}
+                </td>
+            </tr>);
         }
         return ret;
     };
@@ -154,10 +166,10 @@ export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Ty
             })} fetcher={fetcher} renderer={renderer} />
             <Container className='position-relative' style={{ padding: 0, height: '100%', width: '100%'}}>
                 <Row style={{ padding: 0, height: '100%', width: '100%' }}>
-                    <Col style={{ padding: 0, height: '100%' }} className='position-relative'>
+                    <Col style={{ padding: 0, height: '100%', width: '100%' }} className='position-relative'>
                         <div
                             ref={ref}
-                            className='overflow-hidden'
+                            className='overflow-hidden position-relative'
                             style={{
                                 padding: 0,
                                 top: 0,
@@ -167,7 +179,18 @@ export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Ty
                                 height: '100%',
                             }}
                         >
-                            {get_height() !== 0 && state.data && generate(Math.floor(state.scrollTop / get_height()), get_items(Math.floor(state.scrollTop / get_height()), state.data))}
+                            <Table className='position-relative' striped={striped} borderless style={{
+                                padding: 0,
+                                width: '100%',
+                                tableLayout: 'fixed'
+                            }}
+                            >
+                                <tbody style={{
+                                    padding: 0,
+                                }}>
+                                    {get_height() !== 0 && state.data && generate(Math.floor(state.scrollTop / get_height()), get_items(Math.floor(state.scrollTop / get_height()), state.data))}
+                                </tbody>
+                            </Table>
                         </div>
                         <div
                             ref={scrolldiv}
@@ -183,27 +206,22 @@ export default function VirtualTable<Type>({ renderer, fetcher, style }: Args<Ty
                                 const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
                                 const offset = Math.floor(state.scrollTop / get_height());
                                 const index = position + offset;
-                                const childElement = ref.current.children[index - Math.floor(state.scrollTop / get_height())];
-                                if (childElement) {
-                                    const event = new Event('mouseover', { bubbles: true, cancelable: false });
-                                    childElement.children[0].dispatchEvent(event);
-                                    dispatch({
-                                        type: SELECT,
-                                        payload: {
-                                            selection: Selection.HOVER,
-                                            index,
-                                        },
-                                    });
-                                }
+                                dispatch({
+                                    type: SELECT,
+                                    payload: {
+                                        selection: Selection.HOVER,
+                                        index,
+                                    },
+                                });
                             }}
                             onClick={(e) => {
                                 const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
                                 const offset = Math.floor(state.scrollTop / get_height());
                                 const index = position + offset;
-                                const childElement = ref.current.children[index - Math.floor(state.scrollTop / get_height())];
+                                const childElement = ref.current.children[0].children[0].children[index - Math.floor(state.scrollTop / get_height())];
                                 if (childElement) {
                                     const clickEvent = new Event('click', { bubbles: true, cancelable: false });
-                                    childElement.children[0].dispatchEvent(clickEvent);
+                                    childElement.children[0].children[0].dispatchEvent(clickEvent);
                                     dispatch({
                                         type: SELECT,
                                         payload: {
@@ -238,7 +256,9 @@ VirtualTable.propTypes = {
     renderer: PropTypes.func.isRequired,
     fetcher: PropTypes.object.isRequired,
     style: PropTypes.object,
+    striped: PropTypes.bool,
 };
 
 VirtualTable.defaultProps = {
+    striped: false,
 };

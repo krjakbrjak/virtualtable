@@ -12,18 +12,8 @@ import './base.css';
 
 import { DataSource, } from './helpers/types';
 
-/**
- * Represent the rectangular.
- */
-interface Rect {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-}
-
 interface Args<Type> {
-    renderer: (data: Type, classes: string) => ReactNode;
+    renderer: (data: Type) => ReactNode;
     fetcher: DataSource<Type>;
     on_ready: () => void;
 }
@@ -50,7 +40,7 @@ const SizeChecker = <Type,>({ renderer, fetcher, on_ready }: Args<Type>, ref: Re
                 return invisible.current.clientHeight;
             }
             return 0;
-        }
+        },
     }), [invisible]);
 
     useEffect(() => {
@@ -69,7 +59,7 @@ const SizeChecker = <Type,>({ renderer, fetcher, on_ready }: Args<Type>, ref: Re
                 position: 'absolute',
                 pointerEvents: 'none'
             }}>
-                {renderer(data[0], '')}
+                {renderer(data[0])}
             </div>
         );
     }
