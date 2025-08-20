@@ -11,6 +11,7 @@ import React, {
 import './base.css';
 
 import { DataSource, } from './helpers/types';
+import { JSX } from 'react/jsx-runtime';
 
 interface Args<Type> {
     renderer: (data: Type) => ReactNode;

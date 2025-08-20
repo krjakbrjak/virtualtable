@@ -17,7 +17,7 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
         switch (get_page_status(data, i)) {
             case Status.None:
             case Status.Loading:
-                ret.push(...Array.from({ length: Math.min(data.pageSize, data.totalCount - i * data.pageSize) }, () => undefined));
+                ret.push(...Array.from({ length: Math.min(data.pageSize, data.totalCount - i * data.pageSize) }, (): Type | undefined => undefined));
                 break;
             case Status.Loaded:
                 ret.push(...(data.pages[i] as Array<Type>));
