@@ -58,8 +58,14 @@ export async function fetch_items<Type>(page_index: number, page_count: number, 
     }
 
     // Filter out all the errors that might erase while fetching a particular page
-    return Promise.all<Promise<Result<Type>>>(promises.map((promise) => promise.catch((err) => err)))
-        .then((results) => results.filter((result) => !(result instanceof Error)))
+    return Promise.all(promises.map((promise) => promise.catch((err) => err)))
+        .then((results) => {
+            const errors = results.filter((result) => result instanceof Error);
+            if (errors.length > 0) {
+                console.error('Fetch errors:', errors);
+            }
+            return results.filter((result) => !(result instanceof Error));
+        })
         .then((results) => {
             const ret: Data<Type> = {
                 totalCount: 0,
