@@ -12,15 +12,16 @@ An implementation of a table displaying large data sets. See [doc](./docs/doc.md
 
 Make sure you have [Yarn](https://classic.yarnpkg.com/en/docs/install/) installed.
 
-Install dependencies:
+Install all dependencies for the monorepo (library and test app):
 
 ```bash
 yarn install
 ```
 
-Start the test app:
+Start the test app (from the testApp folder):
 
 ```bash
+cd testApp
 yarn start
 ```
 
