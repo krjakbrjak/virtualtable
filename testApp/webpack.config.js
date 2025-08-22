@@ -4,14 +4,14 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 module.exports = (env = {}) => ({
     devtool: 'inline-source-map',
     mode: 'development',
-    entry: './testApp/src/index.tsx',
+    entry: './src/index.tsx',
     output: {
-        path: path.resolve('testApp/dist'),
+        path: path.resolve(__dirname, 'dist'),
         filename: 'index.js',
         publicPath: '/',
     },
     devServer: {
-        static: 'testApp',
+        static: path.resolve(__dirname),
         port: 9001,
         hot: true,
     },

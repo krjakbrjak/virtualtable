@@ -7,9 +7,8 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import VirtualTable from '../../src/VirtualTable';
-import { Result, Style, DataSource } from '../../src/helpers/types';
-import css from './index.css';
+import { VirtualTable, Result, Style, DataSource } from '@krjakbrjak/virtualtable';
+import * as css from './index.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -63,5 +62,10 @@ function App() {
     );
 }
 
-const root = createRoot(document.getElementById('root'));
-root.render(<App />);
+const container = document.getElementById('root');
+if (container) {
+    const root = createRoot(container);
+    root.render(<App />);
+} else {
+    throw new Error("Root container not found");
+}

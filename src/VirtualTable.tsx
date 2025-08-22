@@ -23,6 +23,7 @@ import { DataSource, Status, Style, Data, Pages } from './helpers/types';
 import SizeChecker from './SizeChecker';
 
 import './base.css';
+import { JSX } from 'react/jsx-runtime';
 
 interface Args<Type> {
     renderer: (data: Type) => ReactNode;
