@@ -20,8 +20,8 @@ jobs:
         node-version: ${{ matrix.node-version }}
         registry-url: 'https://npm.pkg.github.com'
     - run: yarn install
-    - run: yarn build --if-present -- --env production
-    - run: yarn test
-    - run: yarn publish
+    - run: cd packages/virtualtable && yarn build --if-present -- --env production
+    - run: cd packages/virtualtable && yarn test
+    - run: cd packages/virtualtable && yarn publish
       env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
