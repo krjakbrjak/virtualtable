@@ -1,0 +1,16 @@
+{
+    "include": ["./src/*", "./src/helpers/**/*"],
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "module": "es6",
+        "target": "es2015",
+        "jsx": "react",
+        "allowJs": true,
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "downlevelIteration": true,
+        "declaration": true
+    }
+}
