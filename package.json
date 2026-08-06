@@ -17,11 +17,14 @@
     },
     "homepage": "https://github.com/krjakbrjak/virtualtable#readme",
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
     "dependencies": {
-        "@popperjs/core": "^2.11.8",
-        "@testing-library/dom": "^10.4.1",
-        "bootstrap": "^5.3.7",
-        "normalize.css": "^8.0.1",
         "prop-types": "^15.8.1",
         "react-bootstrap": "^2.10.10"
     },
@@ -36,6 +39,7 @@
         "@babel/preset-env": "^7.28.3",
         "@babel/preset-react": "^7.27.1",
         "@babel/runtime": "^7.28.3",
+        "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.7.0",
         "@testing-library/react": "^16.3.0",
         "@types/jest": "^30.0.0",
@@ -66,7 +70,7 @@
     "scripts": {
         "build": "webpack",
         "test": "jest",
-        "jsdoc:gen": "jsdoc -c jsdoc.conf.json"
+        "prepack": "webpack --env production"
     },
     "jest": {
         "preset": "ts-jest",
@@ -78,8 +82,5 @@
             "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/__mocks__/fileMock.js",
             "\\.(css|less)$": "identity-obj-proxy"
         }
-    },
-    "publishConfig": {
-        "registry": "https://npm.pkg.github.com/"
     }
 }
