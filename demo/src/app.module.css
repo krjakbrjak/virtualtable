@@ -1,0 +1,111 @@
+.page {
+    width: min(46rem, 100%);
+    margin: 0 auto;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    box-shadow: 0 10px 30px -18px rgb(0 0 0 / 35%);
+    overflow: hidden;
+}
+
+.card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 1rem;
+}
+
+.card__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.card__count {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.columns {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 1.5rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* The table renders each row into a single cell, so the row layout and the
+   header above it share these widths. */
+.col--name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.col--size {
+    flex: 0 0 6rem;
+    text-align: right;
+}
+.col--date {
+    flex: 0 0 7rem;
+}
+
+.table {
+    height: 26rem;
+}
+
+.line {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+}
+
+.name {
+    font-family: ui-monospace, monospace;
+}
+
+.muted {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+    height: 0.7rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #edeff3 25%, #f6f7f9 50%, #edeff3 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.readout {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8125rem;
+    color: var(--muted);
+}
+
+.readout b {
+    color: var(--text);
+    font-weight: 600;
+    font-family: ui-monospace, monospace;
+}

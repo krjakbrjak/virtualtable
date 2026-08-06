@@ -1,10 +1,14 @@
 .item {
+    cursor: pointer;
 }
 
+/* Neutral grey: hover follows the pointer and moves while scrolling, so it
+   must not be mistaken for the selection. */
 .item.hover {
-    background-color: aquamarine;
+    background-color: #f2f3f6;
 }
 
 .item.select {
-    background-color: red;
+    background-color: #e0e7ff;
+    box-shadow: inset 3px 0 0 #4f46e5;
 }
