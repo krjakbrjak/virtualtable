@@ -33,6 +33,7 @@ interface Args<Type> {
     fetcher: DataSource<Type>;
     style?: Style;
     striped?: boolean;
+    onSelected?: (index: number, item: Type) => void;
 }
 
 function calculatePageCount(pageHeight: number, itemHeight: number) {
@@ -51,6 +52,7 @@ export default function VirtualTable<Type>({
     fetcher,
     style,
     striped,
+    onSelected,
 }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
@@ -108,6 +110,38 @@ export default function VirtualTable<Type>({
         });
     }, [fetcher]);
 
+    // Reports a selection once. Keyed on the selected index alone, so it runs
+    // per selection rather than on every state update. If the page holding the
+    // row is not loaded, it is fetched and the report waits for it.
+    useEffect(() => {
+        if (state.selected < 0 || !onSelected || !state.data) {
+            return undefined;
+        }
+
+        const index = state.selected;
+        const { pageSize } = state.data;
+        const pageIndex = Math.floor(index / pageSize);
+        const page = state.data.pages[pageIndex];
+
+        if (Array.isArray(page)) {
+            onSelected(index, page[index % pageSize]);
+            return undefined;
+        }
+
+        let cancelled = false;
+        fetch_items(pageIndex, 1, pageSize, fetcher).then((result) => {
+            const items = result.pages[pageIndex];
+            if (!cancelled && Array.isArray(items)) {
+                onSelected(index, items[index % pageSize]);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.selected]);
+
     // Effect to run on all state updates.
     useEffect(() => {
         const itemHeight = get_height();
@@ -152,6 +186,9 @@ export default function VirtualTable<Type>({
                 });
                 break;
         }
+        // A new fetcher is already handled by the RESET effect above, so
+        // listing it here would only repeat that work.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state]);
 
     useEffect(() => {
@@ -319,6 +356,7 @@ VirtualTable.propTypes = {
     fetcher: PropTypes.object.isRequired,
     style: PropTypes.object,
     striped: PropTypes.bool,
+    onSelected: PropTypes.func,
 };
 
 VirtualTable.defaultProps = {

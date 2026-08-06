@@ -90,16 +90,9 @@ function App() {
                 <div className={s.table}>
                     <VirtualTable<File>
                         style={rowStyle as Style}
-                        renderer={(item) =>
-                            item ? (
-                                <div onClick={() => setSelected(item)}>
-                                    <Row item={item} />
-                                </div>
-                            ) : (
-                                <Loading />
-                            )
-                        }
+                        renderer={(item) => (item ? <Row item={item} /> : <Loading />)}
                         fetcher={source}
+                        onSelected={(_, item) => setSelected(item)}
                     />
                 </div>
 

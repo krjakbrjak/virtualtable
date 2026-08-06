@@ -64,6 +64,7 @@ const SizeChecker = <Type,>(
                 on_ready();
             }
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetcher]);
 
     if (data.length) {
