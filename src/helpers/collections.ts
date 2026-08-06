@@ -17,7 +17,12 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
         switch (get_page_status(data, i)) {
             case Status.None:
             case Status.Loading:
-                ret.push(...Array.from({ length: Math.min(data.pageSize, data.totalCount - i * data.pageSize) }, (): Type | undefined => undefined));
+                ret.push(
+                    ...Array.from(
+                        { length: Math.min(data.pageSize, data.totalCount - i * data.pageSize) },
+                        (): Type | undefined => undefined,
+                    ),
+                );
                 break;
             case Status.Loaded:
                 ret.push(...(data.pages[i] as Array<Type>));
@@ -41,7 +46,12 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
  * @param {number} page_size The size of the page.
  * @returns {Promise<Page<Type>>}
  */
-export async function fetch_items<Type>(page_index: number, page_count: number, page_size: number, fetcher: DataSource<Type>): Promise<Data<Type>> {
+export async function fetch_items<Type>(
+    page_index: number,
+    page_count: number,
+    page_size: number,
+    fetcher: DataSource<Type>,
+): Promise<Data<Type>> {
     // Invalid offset or count => an empty list
     if (page_index < 0 || page_count <= 0 || page_size <= 0) {
         return Promise.resolve({
@@ -53,7 +63,11 @@ export async function fetch_items<Type>(page_index: number, page_count: number, 
 
     // Stores all promises
     const promises: Array<Promise<Result<Type>>> = [];
-    for (let i = page_index * page_size; i < (page_index + page_count) * page_size; i += page_size) {
+    for (
+        let i = page_index * page_size;
+        i < (page_index + page_count) * page_size;
+        i += page_size
+    ) {
         promises.push(fetcher.fetch(i, page_size));
     }
 
@@ -70,7 +84,7 @@ export async function fetch_items<Type>(page_index: number, page_count: number, 
             const ret: Data<Type> = {
                 totalCount: 0,
                 pageSize: page_size,
-                pages: {}
+                pages: {},
             };
             for (let result of results) {
                 ret.totalCount = result.totalCount;

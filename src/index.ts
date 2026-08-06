@@ -5,11 +5,8 @@
  */
 
 import VirtualTable from './VirtualTable';
-import { Result, DataSource, Style } from './helpers/types';
+import type { Result, DataSource, Style } from './helpers/types';
 
-export {
-    VirtualTable,
-    Result,
-    DataSource,
-    Style,
-};
+export { VirtualTable };
+
+export type { Result, DataSource, Style };

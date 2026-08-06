@@ -1,5 +1,3 @@
-import { instanceOf } from "prop-types";
-
 /**
  * Represents the result of the fetch.
  */
@@ -50,7 +48,7 @@ export function get_page_status<Type>(data: Data<Type>, index: number): Status {
     }
 
     return Status.Loaded;
-} 
+}
 
 /**
  * Represents the style of the item in the table.
@@ -72,15 +70,15 @@ export interface Style {
 
 /**
  * Represents an object that fetches the items.
- * 
+ *
  * @template {T} - The type of the element to be returned from the function.
  */
 export interface DataSource<T> {
     /**
      * Fetches data.
-    * @param {number} index - The strating index to fetch items.
-    * @param {number} count - The number of items to fetch.
-    * @returns {Promise<Result<Type>>} - A promise holding the result of the fetch.
+     * @param {number} index - The strating index to fetch items.
+     * @param {number} count - The number of items to fetch.
+     * @returns {Promise<Result<Type>>} - A promise holding the result of the fetch.
      */
     fetch(index: number, count: number): Promise<Result<T>>;
 }

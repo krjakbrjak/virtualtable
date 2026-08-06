@@ -1,28 +1,30 @@
 name: React VirtualTable component CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
 
 jobs:
-  build:
+    build:
+        runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [26.x]
 
-    strategy:
-      matrix:
-        node-version: [26.x]
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm install -g corepack@latest
-    - run: corepack enable
-    - run: yarn install --immutable
-    - run: yarn build --env production
-    - run: yarn test
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - run: npm install -g corepack@latest
+            - run: corepack enable
+            - run: yarn install --immutable
+            - run: yarn lint
+            - run: yarn format:check
+            - run: yarn build
+            - run: yarn test
+            - run: yarn typecheck

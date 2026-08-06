@@ -16,14 +16,23 @@
         "url": "https://github.com/krjakbrjak/virtualtable/issues"
     },
     "homepage": "https://github.com/krjakbrjak/virtualtable#readme",
-    "main": "dist/index.js",
+    "main": "dist/index.cjs",
+    "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs"
+        }
+    },
     "files": [
         "dist"
     ],
     "publishConfig": {
         "registry": "https://npm.pkg.github.com/"
     },
+    "packageManager": "yarn@4.18.0+sha512.fcb8716fe7cd0eece141ffc18b92193a9df9204c1ba83189c288835223fc0bbe64af473bab0d5e9927a7daeb5caf2bb07eb2787cc9338ca040ea125f2a1f2f7e",
     "dependencies": {
         "prop-types": "^15.8.1",
         "react-bootstrap": "^2.10.10"
@@ -33,55 +42,26 @@
         "react-dom": "^19.1.1"
     },
     "devDependencies": {
-        "@babel/core": "^7.28.3",
-        "@babel/eslint-parser": "^7.28.0",
-        "@babel/plugin-transform-runtime": "^7.28.3",
-        "@babel/preset-env": "^7.28.3",
-        "@babel/preset-react": "^7.27.1",
-        "@babel/runtime": "^7.28.3",
-        "@testing-library/dom": "^10.4.1",
-        "@testing-library/jest-dom": "^6.7.0",
-        "@testing-library/react": "^16.3.0",
-        "@types/jest": "^30.0.0",
-        "@types/node": "^24.3.0",
-        "@types/react": "^19.1.10",
-        "@types/react-dom": "^19.1.7",
-        "babel-loader": "^10.0.0",
-        "css-loader": "^7.1.2",
-        "eslint": "^9.33.0",
-        "eslint-config-airbnb": "^19.0.4",
-        "eslint-plugin-import": "^2.32.0",
-        "eslint-plugin-jsx-a11y": "^6.10.2",
-        "eslint-plugin-react": "^7.37.5",
-        "eslint-plugin-react-hooks": "^5.2.0",
-        "eslint-webpack-plugin": "^5.0.2",
-        "identity-obj-proxy": "^3.0.0",
-        "jest": "^30.0.5",
-        "react": "^19.1.1",
-        "react-dom": "^19.1.1",
-        "sinon": "^21.0.0",
-        "style-loader": "^4.0.0",
-        "ts-jest": "^29.4.1",
-        "ts-loader": "^9.5.2",
-        "typescript": "^5.9.2",
-        "webpack": "^5.101.3",
-        "webpack-cli": "^6.0.1"
+        "@types/node": "^26.1.2",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "oxlint": "^1.77.0",
+        "prettier": "^3.9.6",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
+        "typescript": "^7.0.2",
+        "vite": "^8.2.1",
+        "vite-plugin-css-injected-by-js": "^5.0.2",
+        "vitest": "^4.1.10"
     },
     "scripts": {
-        "build": "webpack",
-        "test": "jest",
-        "prepack": "webpack --env production"
-    },
-    "jest": {
-        "preset": "ts-jest",
-        "verbose": true,
-        "testMatch": [
-            "**/__tests__/**/*.[jt]s?(x)"
-        ],
-        "moduleNameMapper": {
-            "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/__mocks__/fileMock.js",
-            "\\.(css|less)$": "identity-obj-proxy"
-        }
-    },
-    "packageManager": "yarn@4.18.0+sha512.fcb8716fe7cd0eece141ffc18b92193a9df9204c1ba83189c288835223fc0bbe64af473bab0d5e9927a7daeb5caf2bb07eb2787cc9338ca040ea125f2a1f2f7e"
+        "build": "vite build && tsc -p tsconfig.build.json",
+        "prepack": "vite build && tsc -p tsconfig.build.json",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint src",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    }
 }

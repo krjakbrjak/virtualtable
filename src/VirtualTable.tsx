@@ -4,9 +4,7 @@
  * @author Nikita Vakula <programmistov.programmist@gmail.com>
  */
 
-import React, {
-    useReducer, useEffect, useRef, ReactNode,
-} from 'react';
+import React, { useReducer, useEffect, useRef, ReactNode } from 'react';
 import { Container, Row, Col, Table } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
@@ -15,11 +13,16 @@ import { fetch_items, get_items } from './helpers/collections';
 import {
     reducer,
     Selection,
-    SCROLL, SELECT, INITIALIZED,
-    INITIALIZE, LOADED, LOAD, RESET
+    SCROLL,
+    SELECT,
+    INITIALIZED,
+    INITIALIZE,
+    LOADED,
+    LOAD,
+    RESET,
 } from './helpers/reducer';
 import { get_initial_state, get_total_count } from './helpers/state';
-import { DataSource, Status, Style, Data, Pages } from './helpers/types';
+import { DataSource, Status, Style, Pages } from './helpers/types';
 import SizeChecker from './SizeChecker';
 
 import './base.css';
@@ -43,7 +46,12 @@ function calculatePageCount(pageHeight: number, itemHeight: number) {
  *
  * @component
  */
-export default function VirtualTable<Type>({ renderer, fetcher, style, striped }: Args<Type>): JSX.Element {
+export default function VirtualTable<Type>({
+    renderer,
+    fetcher,
+    style,
+    striped,
+}: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
     const scrolldiv = useRef(null);
@@ -54,7 +62,7 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
             return invisible.current.height();
         }
         return 0;
-    }
+    };
 
     const generate = (offset: number, d: Array<Type | undefined>) => {
         const ret = [];
@@ -69,18 +77,26 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
             } else if (i + offset === state.hovered && style) {
                 className = `${className} ${style.hover}`;
             }
-            ret.push(<tr key={i} style={{
-                padding: 0,
-                width: '100%',
-            }}>
-                <td className={className} style={{
-                    padding: 0,
-                    width: '100%',
-                    textOverflow: 'ellipsis',
-                }}>
-                    {renderer(d[i])}
-                </td>
-            </tr>);
+            ret.push(
+                <tr
+                    key={i}
+                    style={{
+                        padding: 0,
+                        width: '100%',
+                    }}
+                >
+                    <td
+                        className={className}
+                        style={{
+                            padding: 0,
+                            width: '100%',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
+                        {renderer(d[i])}
+                    </td>
+                </tr>,
+            );
         }
         return ret;
     };
@@ -148,7 +164,7 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
         window.addEventListener('resize', handler);
         return () => {
             window.removeEventListener('resize', handler);
-        }
+        };
     }, []);
 
     // Effect to run on each render to make sure that the scrolltop of
@@ -162,15 +178,28 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
 
     return (
         <>
-            <SizeChecker ref={invisible} on_ready={() => dispatch({
-                type: INITIALIZED,
-            })} fetcher={fetcher} renderer={renderer} />
-            <Container className='position-relative' style={{ padding: 0, height: '100%', width: '100%'}}>
+            <SizeChecker
+                ref={invisible}
+                on_ready={() =>
+                    dispatch({
+                        type: INITIALIZED,
+                    })
+                }
+                fetcher={fetcher}
+                renderer={renderer}
+            />
+            <Container
+                className="position-relative"
+                style={{ padding: 0, height: '100%', width: '100%' }}
+            >
                 <Row style={{ padding: 0, height: '100%', width: '100%' }}>
-                    <Col style={{ padding: 0, height: '100%', width: '100%' }} className='position-relative'>
+                    <Col
+                        style={{ padding: 0, height: '100%', width: '100%' }}
+                        className="position-relative"
+                    >
                         <div
                             ref={ref}
-                            className='overflow-hidden position-relative'
+                            className="overflow-hidden position-relative"
                             style={{
                                 padding: 0,
                                 top: 0,
@@ -180,16 +209,30 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
                                 height: '100%',
                             }}
                         >
-                            <Table className='position-relative' striped={striped} borderless style={{
-                                padding: 0,
-                                width: '100%',
-                                tableLayout: 'fixed'
-                            }}
-                            >
-                                <tbody style={{
+                            <Table
+                                className="position-relative"
+                                striped={striped}
+                                borderless
+                                style={{
                                     padding: 0,
-                                }}>
-                                    {get_height() !== 0 && state.data && generate(Math.floor(state.scrollTop / get_height()), get_items(Math.floor(state.scrollTop / get_height()), state.data))}
+                                    width: '100%',
+                                    tableLayout: 'fixed',
+                                }}
+                            >
+                                <tbody
+                                    style={{
+                                        padding: 0,
+                                    }}
+                                >
+                                    {get_height() !== 0 &&
+                                        state.data &&
+                                        generate(
+                                            Math.floor(state.scrollTop / get_height()),
+                                            get_items(
+                                                Math.floor(state.scrollTop / get_height()),
+                                                state.data,
+                                            ),
+                                        )}
                                 </tbody>
                             </Table>
                         </div>
@@ -204,7 +247,12 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
                                 height: '100%',
                             }}
                             onMouseMove={(e) => {
-                                const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
+                                const position = Math.floor(
+                                    (e.clientY +
+                                        ref.current.scrollTop -
+                                        scrolldiv.current.getBoundingClientRect().top) /
+                                        get_height(),
+                                );
                                 const offset = Math.floor(state.scrollTop / get_height());
                                 const index = position + offset;
                                 dispatch({
@@ -216,12 +264,23 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
                                 });
                             }}
                             onClick={(e) => {
-                                const position = Math.floor((e.clientY + ref.current.scrollTop - scrolldiv.current.getBoundingClientRect().top) / get_height());
+                                const position = Math.floor(
+                                    (e.clientY +
+                                        ref.current.scrollTop -
+                                        scrolldiv.current.getBoundingClientRect().top) /
+                                        get_height(),
+                                );
                                 const offset = Math.floor(state.scrollTop / get_height());
                                 const index = position + offset;
-                                const childElement = ref.current.children[0].children[0].children[index - Math.floor(state.scrollTop / get_height())];
+                                const childElement =
+                                    ref.current.children[0].children[0].children[
+                                        index - Math.floor(state.scrollTop / get_height())
+                                    ];
                                 if (childElement) {
-                                    const clickEvent = new Event('click', { bubbles: true, cancelable: false });
+                                    const clickEvent = new Event('click', {
+                                        bubbles: true,
+                                        cancelable: false,
+                                    });
                                     childElement.children[0].children[0].dispatchEvent(clickEvent);
                                     dispatch({
                                         type: SELECT,
@@ -241,9 +300,11 @@ export default function VirtualTable<Type>({ renderer, fetcher, style, striped }
                                 });
                             }}
                         >
-                            <div style={{
-                                height: `${get_total_count(state) * get_height()}px`, width: '100%',
-                            }}
+                            <div
+                                style={{
+                                    height: `${get_total_count(state) * get_height()}px`,
+                                    width: '100%',
+                                }}
                             />
                         </div>
                     </Col>

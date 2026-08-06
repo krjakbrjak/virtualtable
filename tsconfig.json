@@ -1,16 +1,21 @@
 {
-    "include": ["./src/*", "./src/helpers/**/*"],
     "compilerOptions": {
-        "outDir": "./dist/",
-        "sourceMap": true,
+        "target": "ES2022",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "types": ["vite/client", "vitest/globals"],
+
+        "strict": false,
         "noImplicitAny": true,
-        "module": "es6",
-        "target": "es2015",
-        "jsx": "react",
-        "allowJs": true,
-        "moduleResolution": "node",
+        "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
-        "downlevelIteration": true,
-        "declaration": true
-    }
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "noEmit": true
+    },
+    "include": ["src"]
 }

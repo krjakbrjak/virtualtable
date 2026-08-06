@@ -21,5 +21,5 @@ export function get_initial_state<T>(): State<T> {
         scrollTop: 0,
         selected: -1,
         hovered: -1,
-    }
+    };
 }

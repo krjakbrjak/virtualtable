@@ -5,12 +5,18 @@
  */
 
 import React, {
-    useEffect, useRef, ReactNode, useState, forwardRef, Ref, useImperativeHandle,
+    useEffect,
+    useRef,
+    ReactNode,
+    useState,
+    forwardRef,
+    Ref,
+    useImperativeHandle,
 } from 'react';
 
 import './base.css';
 
-import { DataSource, } from './helpers/types';
+import { DataSource } from './helpers/types';
 import { JSX } from 'react/jsx-runtime';
 
 interface Args<Type> {
@@ -31,18 +37,25 @@ interface ISizeChecker {
  *
  * @component
  */
-const SizeChecker = <Type,>({ renderer, fetcher, on_ready }: Args<Type>, ref: Ref<ISizeChecker>): JSX.Element => {
+const SizeChecker = <Type,>(
+    { renderer, fetcher, on_ready }: Args<Type>,
+    ref: Ref<ISizeChecker>,
+): JSX.Element => {
     const invisible = useRef(null);
     const [data, setData] = useState<Array<Type>>([]);
 
-    useImperativeHandle(ref, () => ({
-        height: () => {
-            if (invisible && invisible.current) {
-                return invisible.current.clientHeight;
-            }
-            return 0;
-        },
-    }), [invisible]);
+    useImperativeHandle(
+        ref,
+        () => ({
+            height: () => {
+                if (invisible && invisible.current) {
+                    return invisible.current.clientHeight;
+                }
+                return 0;
+            },
+        }),
+        [invisible],
+    );
 
     useEffect(() => {
         fetcher.fetch(0, 1).then((result) => {
@@ -55,17 +68,20 @@ const SizeChecker = <Type,>({ renderer, fetcher, on_ready }: Args<Type>, ref: Re
 
     if (data.length) {
         return (
-            <div ref={invisible} style={{
-                'visibility': 'hidden',
-                position: 'absolute',
-                pointerEvents: 'none'
-            }}>
+            <div
+                ref={invisible}
+                style={{
+                    visibility: 'hidden',
+                    position: 'absolute',
+                    pointerEvents: 'none',
+                }}
+            >
                 {renderer(data[0])}
             </div>
         );
     }
 
     return null;
-}
+};
 
 export default forwardRef(SizeChecker);

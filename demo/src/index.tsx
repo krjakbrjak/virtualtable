@@ -33,31 +33,37 @@ class Fetcher implements DataSource<number> {
 function App() {
     return (
         <Container>
-            <Row style={{
-                height: '50px'
-            }} />
+            <Row
+                style={{
+                    height: '50px',
+                }}
+            />
             <Row>
                 <Col />
-                <Col style={{height: 400}}>
+                <Col style={{ height: 400 }}>
                     <VirtualTable<number>
                         striped
                         style={style}
-                        renderer={(i) => <div
-                            className={`text-center p-3`}
-                            onClick={(e) => {
-                                console.log(`${i} clicked`);
-                            }}
-                        >
-                            {i !== undefined ? i : 'unknown'}
-                        </div>}
+                        renderer={(i) => (
+                            <div
+                                className={`text-center p-3`}
+                                onClick={(e) => {
+                                    console.log(`${i} clicked`);
+                                }}
+                            >
+                                {i !== undefined ? i : 'unknown'}
+                            </div>
+                        )}
                         fetcher={new Fetcher()}
                     />
                 </Col>
                 <Col />
             </Row>
-            <Row style={{
-                height: '50px'
-            }} />
+            <Row
+                style={{
+                    height: '50px',
+                }}
+            />
         </Container>
     );
 }
@@ -67,5 +73,5 @@ if (container) {
     const root = createRoot(container);
     root.render(<App />);
 } else {
-    throw new Error("Root container not found");
+    throw new Error('Root container not found');
 }

@@ -1,7 +1,7 @@
 import { Data, Status } from './types';
 import { State, get_initial_state } from './state';
 
-export const SCROLL = 'scroll'
+export const SCROLL = 'scroll';
 export const SELECT = 'SELECT';
 export const LOAD = 'LOAD';
 export const LOADED = 'LOADED';
@@ -18,7 +18,7 @@ interface ScrollAction {
     type: typeof SCROLL;
     payload: {
         scrollTop: number;
-    }
+    };
 }
 
 interface SelectAction {
@@ -26,21 +26,21 @@ interface SelectAction {
     payload: {
         selection: Selection;
         index: number;
-    }
+    };
 }
 
 interface LoadedAction<Type> {
     type: typeof LOADED;
     payload: {
         data: Data<Type>;
-    }
+    };
 }
 
 interface LoadAction {
     type: typeof LOAD;
     payload: {
         pages: Array<number>;
-    }
+    };
 }
 
 interface InitializeAction {
@@ -55,7 +55,14 @@ interface InitializedAction {
     type: typeof INITIALIZED;
 }
 
-type Action<Type> = ScrollAction | SelectAction | LoadedAction<Type> | ResetAction | LoadAction | InitializeAction | InitializedAction;
+type Action<Type> =
+    | ScrollAction
+    | SelectAction
+    | LoadedAction<Type>
+    | ResetAction
+    | LoadAction
+    | InitializeAction
+    | InitializedAction;
 /**
  * Reducer function for managing state changes.
  *
@@ -92,7 +99,7 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
             if (state.status !== Status.Loaded) {
                 return state;
             }
-            const request: {[key: number]: typeof Status.Loading}  = {};
+            const request: { [key: number]: typeof Status.Loading } = {};
             for (let page of action.payload.pages) {
                 request[page] = Status.Loading;
             }
@@ -104,11 +111,14 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                     pages: {
                         ...state.data?.pages,
                         ...request,
-                    }
-                }
+                    },
+                },
             };
         case LOADED:
-            if (state.data?.pageSize !== action.payload.data.pageSize || state.data?.totalCount !== action.payload.data.totalCount) {
+            if (
+                state.data?.pageSize !== action.payload.data.pageSize ||
+                state.data?.totalCount !== action.payload.data.totalCount
+            ) {
                 return {
                     ...get_initial_state<Type>(),
                     status: Status.Loaded,
@@ -123,25 +133,25 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                     pages: {
                         ...state.data?.pages,
                         ...action.payload.data.pages,
-                    }
-                }
+                    },
+                },
             };
         case SELECT:
             switch (action.payload.selection) {
-            case Selection.CLICK:
-                return {
-                    ...state,
-                    selected: action.payload.index,
-                };
-            case Selection.HOVER:
-            default:
-                return {
-                    ...state,
-                    hovered: action.payload.index,
-                };
+                case Selection.CLICK:
+                    return {
+                        ...state,
+                        selected: action.payload.index,
+                    };
+                case Selection.HOVER:
+                default:
+                    return {
+                        ...state,
+                        hovered: action.payload.index,
+                    };
             }
         default:
             break;
     }
     return state;
-};
+}
