@@ -6,6 +6,11 @@ export interface State<Type> {
     data?: Data<Type>;
     selected: number;
     hovered: number;
+    /**
+     * Consecutive failures per page, used to back off and to stop retrying a
+     * page that keeps failing. An entry is dropped once the page loads.
+     */
+    retries: { [page: number]: number };
 }
 
 export function get_total_count<Type>(state: State<Type>): number {
@@ -21,5 +26,6 @@ export function get_initial_state<T>(): State<T> {
         scrollTop: 0,
         selected: -1,
         hovered: -1,
+        retries: {},
     };
 }

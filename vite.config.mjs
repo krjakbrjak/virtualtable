@@ -7,6 +7,8 @@ export default defineConfig({
     plugins: [cssInjectedByJs()],
     test: {
         globals: true,
+        environment: 'jsdom',
+        setupFiles: './src/__tests__/setup.ts',
     },
     build: {
         lib: {

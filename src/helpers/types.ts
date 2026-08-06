@@ -21,10 +21,11 @@ export enum Status {
     Loading,
     Loaded,
     Unavailable,
+    Error,
 }
 
 export interface Pages<Type> {
-    [page: number]: Array<Type> | Status.Loading;
+    [page: number]: Array<Type> | Status.Loading | Status.Error;
 }
 
 export interface Data<Type> {
@@ -35,7 +36,18 @@ export interface Data<Type> {
 
 export function get_page_status<Type>(data: Data<Type>, index: number): Status {
     const { totalCount, pageSize, pages } = data;
-    if (totalCount <= 0 || pageSize <= 0 || index < 0 || index * pageSize >= totalCount) {
+    if (pageSize <= 0 || index < 0) {
+        return Status.Unavailable;
+    }
+
+    // Checked before the bounds test below: when the very first fetch fails the
+    // total count is still unknown, and reporting such a page as Unavailable
+    // would hide the failure and stop it ever being retried.
+    if (pages[index] === Status.Error) {
+        return Status.Error;
+    }
+
+    if (totalCount <= 0 || index * pageSize >= totalCount) {
         return Status.Unavailable;
     }
 

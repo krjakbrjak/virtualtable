@@ -21,6 +21,7 @@ import {
     RESET,
 } from './helpers/reducer';
 import { get_initial_state, get_total_count } from './helpers/state';
+import { retry_delay } from './helpers/retry';
 import { DataSource, Status, Style, Pages } from './helpers/types';
 import SizeChecker from './SizeChecker';
 
@@ -33,6 +34,13 @@ interface Args<Type> {
     style?: Style;
     striped?: boolean;
     onSelected?: (index: number, item: Type) => void;
+    /**
+     * Called every time a page fails to load, including on each retry. A page
+     * on screen is retried for as long as it keeps failing, with the delay
+     * growing up to a ceiling, so a consumer reporting an outage should expect
+     * repeated calls for the same page rather than one per failure.
+     */
+    onError?: (page: number, error: unknown) => void;
 }
 
 function calculatePageCount(pageHeight: number, itemHeight: number) {
@@ -52,10 +60,19 @@ export default function VirtualTable<Type>({
     style,
     striped = false,
     onSelected,
+    onError,
 }: Args<Type>): JSX.Element {
     const ref = useRef(null);
     const invisible = useRef(null);
     const scrolldiv = useRef(null);
+    // Pending retry timers, keyed by page. Handles rather than state: they are
+    // resources to be cleared, and the attempt counts they act on live in the
+    // reducer.
+    const timers = useRef<{ [page: number]: ReturnType<typeof setTimeout> }>({});
+    // Bumped on every reset. A fetch or a retry started before a reset carries
+    // the page size that was current when it began, so its result has to be
+    // dropped rather than merged into a collection that has been re-measured.
+    const generation = useRef(0);
     const [state, dispatch] = useReducer(reducer<Type>, {}, get_initial_state<Type>);
 
     const get_height = () => {
@@ -102,12 +119,62 @@ export default function VirtualTable<Type>({
         return ret;
     };
 
-    // Effect that updates the lazy collection in case fetcher gets updated
-    useEffect(() => {
+    // Fetches one page and folds the outcome, success or failure, back into
+    // the state. Failures arrive as Status.Error markers, so a page that could
+    // not be loaded stays distinguishable from one that was never requested.
+    const load = (page: number, size: number) => {
+        const started = generation.current;
+        dispatch({
+            type: LOAD,
+            payload: {
+                pages: [page],
+            },
+        });
+        fetch_items(page, 1, size, fetcher).then(({ data, errors }) => {
+            if (started !== generation.current) {
+                return;
+            }
+            dispatch({
+                type: LOADED,
+                payload: {
+                    data,
+                },
+            });
+            if (onError) {
+                for (const key of Object.keys(errors)) {
+                    onError(Number(key), errors[Number(key)]);
+                }
+            }
+        });
+    };
+
+    // Discards everything in flight along with the collection itself. Anything
+    // that resets the collection has to go through here, otherwise a pending
+    // retry lands afterwards carrying the page size it was started with and
+    // forces another reset.
+    const reset = () => {
+        generation.current += 1;
+        Object.values(timers.current).forEach(clearTimeout);
+        timers.current = {};
         dispatch({
             type: RESET,
         });
+    };
+
+    // Effect that updates the lazy collection in case fetcher gets updated
+    useEffect(() => {
+        reset();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetcher]);
+
+    // Pending retries must not outlive the component.
+    useEffect(
+        () => () => {
+            Object.values(timers.current).forEach(clearTimeout);
+            timers.current = {};
+        },
+        [],
+    );
 
     // Reports a selection once. Keyed on the selected index alone, so it runs
     // per selection rather than on every state update. If the page holding the
@@ -128,9 +195,12 @@ export default function VirtualTable<Type>({
         }
 
         let cancelled = false;
-        fetch_items(pageIndex, 1, pageSize, fetcher).then((result) => {
-            const items = result.pages[pageIndex];
-            if (!cancelled && Array.isArray(items)) {
+        const started = generation.current;
+        fetch_items(pageIndex, 1, pageSize, fetcher).then(({ data }) => {
+            const items = data.pages[pageIndex];
+            // A reset re-measures the rows, so pageSize may no longer be the
+            // one this index was resolved against.
+            if (!cancelled && started === generation.current && Array.isArray(items)) {
                 onSelected(index, items[index % pageSize]);
             }
         });
@@ -159,21 +229,27 @@ export default function VirtualTable<Type>({
                     let data_pages: Pages<Type> = state.data ? state.data.pages : {};
                     const page_index = Math.floor(offset / c);
                     for (let i = -1; i < 2; ++i) {
-                        if (page_index + i > -1 && data_pages[page_index + i] === undefined) {
-                            dispatch({
-                                type: LOAD,
-                                payload: {
-                                    pages: [page_index + i],
-                                },
-                            });
-                            fetch_items(page_index + i, 1, c, fetcher).then((result) => {
-                                dispatch({
-                                    type: LOADED,
-                                    payload: {
-                                        data: result,
+                        const page = page_index + i;
+                        if (page < 0) {
+                            continue;
+                        }
+                        if (data_pages[page] === undefined) {
+                            load(page, c);
+                        } else if (data_pages[page] === Status.Error) {
+                            // Retried on a timer rather than immediately: this
+                            // effect runs on every state update, and the LOADED
+                            // that marks the failure is itself such an update.
+                            // There is no attempt limit, only a growing delay,
+                            // so a source that recovers is always noticed.
+                            if (timers.current[page] === undefined) {
+                                timers.current[page] = setTimeout(
+                                    () => {
+                                        delete timers.current[page];
+                                        load(page, c);
                                     },
-                                });
-                            });
+                                    retry_delay(state.retries[page] || 0),
+                                );
+                            }
                         }
                     }
                 }
@@ -192,15 +268,14 @@ export default function VirtualTable<Type>({
 
     useEffect(() => {
         const handler = () => {
-            dispatch({
-                type: RESET,
-            });
+            reset();
         };
 
         window.addEventListener('resize', handler);
         return () => {
             window.removeEventListener('resize', handler);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Effect to run on each render to make sure that the scrolltop of
@@ -221,6 +296,13 @@ export default function VirtualTable<Type>({
                         type: INITIALIZED,
                     })
                 }
+                on_error={(error) => {
+                    // The probe measures the first row, so a failure here is
+                    // reported against page 0.
+                    if (onError) {
+                        onError(0, error);
+                    }
+                }}
                 fetcher={fetcher}
                 renderer={renderer}
             />

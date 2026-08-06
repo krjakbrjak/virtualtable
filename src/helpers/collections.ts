@@ -17,9 +17,17 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
         switch (get_page_status(data, i)) {
             case Status.None:
             case Status.Loading:
+            case Status.Error:
                 ret.push(
                     ...Array.from(
-                        { length: Math.min(data.pageSize, data.totalCount - i * data.pageSize) },
+                        {
+                            // The total count is unknown until a page loads, so
+                            // this can go negative while a failure is pending.
+                            length: Math.max(
+                                0,
+                                Math.min(data.pageSize, data.totalCount - i * data.pageSize),
+                            ),
+                        },
                         (): Type | undefined => undefined,
                     ),
                 );
@@ -38,58 +46,70 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
 }
 
 /**
+ * The outcome of a fetch. Pages that failed are marked `Status.Error` in
+ * `data.pages`, and the reason each one failed is kept in `errors` so the
+ * caller can report it. `data.totalCount` is 0 when no page loaded, which
+ * means "not learned" rather than "the collection is empty".
+ */
+export interface Fetched<Type> {
+    data: Data<Type>;
+    errors: { [page: number]: unknown };
+}
+
+/**
  * Fetches items.
+ *
+ * A page that fails does not fail its siblings: each is recorded on its own,
+ * so a partial outage still yields whatever loaded.
  *
  * @async
  * @param {number} page_index An index of the first page to fetch.
  * @param {number} page_count Max number of pages to fetch.
  * @param {number} page_size The size of the page.
- * @returns {Promise<Page<Type>>}
+ * @returns {Promise<Fetched<Type>>}
  */
 export async function fetch_items<Type>(
     page_index: number,
     page_count: number,
     page_size: number,
     fetcher: DataSource<Type>,
-): Promise<Data<Type>> {
+): Promise<Fetched<Type>> {
     // Invalid offset or count => an empty list
     if (page_index < 0 || page_count <= 0 || page_size <= 0) {
-        return Promise.resolve({
-            totalCount: 0,
-            pageSize: page_size,
-            pages: {},
-        });
+        return {
+            data: { totalCount: 0, pageSize: page_size, pages: {} },
+            errors: {},
+        };
     }
 
-    // Stores all promises
+    const requested: Array<number> = [];
     const promises: Array<Promise<Result<Type>>> = [];
     for (
         let i = page_index * page_size;
         i < (page_index + page_count) * page_size;
         i += page_size
     ) {
+        requested.push(i / page_size);
         promises.push(fetcher.fetch(i, page_size));
     }
 
-    // Filter out all the errors that might erase while fetching a particular page
-    return Promise.all(promises.map((promise) => promise.catch((err) => err)))
-        .then((results) => {
-            const errors = results.filter((result) => result instanceof Error);
-            if (errors.length > 0) {
-                console.error('Fetch errors:', errors);
-            }
-            return results.filter((result) => !(result instanceof Error));
-        })
-        .then((results) => {
-            const ret: Data<Type> = {
-                totalCount: 0,
-                pageSize: page_size,
-                pages: {},
-            };
-            for (let result of results) {
-                ret.totalCount = result.totalCount;
-                ret.pages[result.from / page_size] = result.items;
-            }
-            return Promise.resolve(ret);
-        });
+    // allSettled rather than catching into the result: a fetcher is free to
+    // reject with something that is not an Error, and such a rejection must
+    // not be mistaken for a successful page.
+    const settled = await Promise.allSettled(promises);
+
+    const ret: Fetched<Type> = {
+        data: { totalCount: 0, pageSize: page_size, pages: {} },
+        errors: {},
+    };
+    settled.forEach((outcome, i) => {
+        if (outcome.status === 'fulfilled') {
+            ret.data.totalCount = outcome.value.totalCount;
+            ret.data.pages[outcome.value.from / page_size] = outcome.value.items;
+        } else {
+            ret.data.pages[requested[i]] = Status.Error;
+            ret.errors[requested[i]] = outcome.reason;
+        }
+    });
+    return ret;
 }

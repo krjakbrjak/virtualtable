@@ -114,28 +114,55 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                     },
                 },
             };
-        case LOADED:
+        case LOADED: {
+            const incoming = action.payload.data;
+
+            // A payload in which every page failed taught us nothing about the
+            // collection: its totalCount is 0 because it is unknown, not
+            // because the source is empty. Treating that as "the source
+            // changed" is what used to wipe scroll position and selection.
+            const learned = Object.values(incoming.pages).some((page) => Array.isArray(page));
+
+            const count_retries = (base: { [page: number]: number }) => {
+                const ret = { ...base };
+                for (const key of Object.keys(incoming.pages)) {
+                    const index = Number(key);
+                    if (incoming.pages[index] === Status.Error) {
+                        ret[index] = (ret[index] || 0) + 1;
+                    } else {
+                        delete ret[index];
+                    }
+                }
+                return ret;
+            };
+
             if (
-                state.data?.pageSize !== action.payload.data.pageSize ||
-                state.data?.totalCount !== action.payload.data.totalCount
+                learned &&
+                (state.data?.pageSize !== incoming.pageSize ||
+                    state.data?.totalCount !== incoming.totalCount)
             ) {
                 return {
                     ...get_initial_state<Type>(),
                     status: Status.Loaded,
-                    data: action.payload.data,
+                    data: incoming,
+                    retries: count_retries({}),
                 };
             }
             return {
                 ...state,
                 status: Status.Loaded,
+                retries: count_retries(state.retries),
                 data: {
                     ...state?.data,
+                    pageSize: state.data?.pageSize ?? incoming.pageSize,
+                    totalCount: learned ? incoming.totalCount : (state.data?.totalCount ?? 0),
                     pages: {
                         ...state.data?.pages,
-                        ...action.payload.data.pages,
+                        ...incoming.pages,
                     },
                 },
             };
+        }
         case SELECT:
             switch (action.payload.selection) {
                 case Selection.CLICK:
