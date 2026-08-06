@@ -4,7 +4,7 @@
   "private": true,
   "main": "src/index.tsx",
   "dependencies": {
-    "@krjakbrjak/virtualtable": "link:..",
+    "@krjakbrjak/virtualtable": "portal:..",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
