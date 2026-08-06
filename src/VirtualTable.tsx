@@ -6,7 +6,6 @@
 
 import React, { useReducer, useEffect, useRef, ReactNode } from 'react';
 import { Container, Row, Col, Table } from 'react-bootstrap';
-import PropTypes from 'prop-types';
 
 import { fetch_items, get_items } from './helpers/collections';
 
@@ -51,7 +50,7 @@ export default function VirtualTable<Type>({
     renderer,
     fetcher,
     style,
-    striped,
+    striped = false,
     onSelected,
 }: Args<Type>): JSX.Element {
     const ref = useRef(null);
@@ -350,15 +349,3 @@ export default function VirtualTable<Type>({
         </>
     );
 }
-
-VirtualTable.propTypes = {
-    renderer: PropTypes.func.isRequired,
-    fetcher: PropTypes.object.isRequired,
-    style: PropTypes.object,
-    striped: PropTypes.bool,
-    onSelected: PropTypes.func,
-};
-
-VirtualTable.defaultProps = {
-    striped: false,
-};

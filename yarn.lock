@@ -37,7 +37,6 @@ __metadata:
     "@types/react-dom": "npm:^19.2.4"
     oxlint: "npm:^1.77.0"
     prettier: "npm:^3.9.6"
-    prop-types: "npm:^15.8.1"
     react: "npm:^19.2.8"
     react-bootstrap: "npm:^2.10.10"
     react-dom: "npm:^19.2.8"

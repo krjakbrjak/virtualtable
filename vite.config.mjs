@@ -17,7 +17,7 @@ export default defineConfig({
         rollupOptions: {
             // Everything declared as a dependency or peer dependency is
             // resolved by the consumer, so it is never bundled.
-            external: (id) => /^(react|react-dom|react-bootstrap|prop-types)(\/|$)/.test(id),
+            external: (id) => /^(react|react-dom|react-bootstrap)(\/|$)/.test(id),
         },
     },
 });
