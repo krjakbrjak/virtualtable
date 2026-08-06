@@ -1,4 +1,55 @@
-# virtualtable-monorepo
+# virtualtable
 
-This repository is a monorepo to easily organize the VirtualTable library and its example/test app.
-For detailed usage, API, and documentation, please consult the README in [virtualtable](/packages/virtualtable/README.md).
+![status](https://github.com/krjakbrjak/virtualtable/workflows/React%20VirtualTable%20component%20CI/badge.svg)
+
+An implementation of a table displaying large data sets. See [doc](./docs/doc.md) for more details.
+
+<p align="center">
+<img src="./demo.gif" alt="VirtualTable demo" width="640" height="400" />
+</p>
+
+## Getting Started
+
+Make sure you have [Yarn](https://classic.yarnpkg.com/en/docs/install/) installed.
+
+Install dependencies:
+
+```bash
+yarn install
+```
+
+Run the demo:
+
+```bash
+cd demo
+yarn install
+yarn start
+```
+
+The app will be available at `localhost:9001`.
+
+## Styling VirtualTable
+
+To style the VirtualTable, supply a CSS module with the following optional class names:
+
+- `item`: Applied to each table item.
+- `hover`: Applied when an item is hovered.
+- `select`: Applied when an item is selected.
+
+Example CSS module (`MyTableStyles.module.css`):
+
+```css
+.item { /* base item styles */ }
+.hover { /* hover styles */ }
+.select { /* selected item styles */ }
+```
+
+Example usage:
+
+```jsx
+import styles from './MyTableStyles.module.css';
+
+<VirtualTable style={styles} ... />
+```
+
+See [index.css](/demo/src/index.css) from the [demo](/demo/).

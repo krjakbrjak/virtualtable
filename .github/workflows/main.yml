@@ -22,5 +22,5 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: yarn install
-    - run: cd packages/virtualtable && yarn build --if-present -- --env production
-    - run: cd packages/virtualtable && yarn test
+    - run: yarn build --env production
+    - run: yarn test
