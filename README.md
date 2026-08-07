@@ -30,7 +30,9 @@ yarn install
 yarn start
 ```
 
-The app will be available at `localhost:9001`.
+The app will be available at `localhost:9001`. The "Simulate outage" toggle in
+the demo breaks the data source, so you can watch the failure handling work.
+
 ## Usage
 
 ```jsx

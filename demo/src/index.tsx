@@ -38,7 +38,14 @@ const file = (index: number): File => {
 
 // Stands in for a paginated API, latency included.
 class Files implements DataSource<File> {
+    // Flipped by the toggle in the header, so the error handling has something
+    // to react to.
+    down = false;
+
     fetch(index: number, count: number): Promise<Result<File>> {
+        if (this.down) {
+            return Promise.reject(new Error(`page starting at ${index} is unavailable`));
+        }
         const items = [...Array(count).keys()].map((offset) => file(offset + index));
         return new Promise((resolve) => {
             setTimeout(() => resolve({ from: index, items, totalCount: TOTAL }), 400);
@@ -72,14 +79,34 @@ const Row = ({ item }: { item: File }) => (
 
 function App() {
     const [selected, setSelected] = useState<File | null>(null);
+    const [down, setDown] = useState(false);
+    const [failed, setFailed] = useState<number | null>(null);
 
     return (
         <main className={s.page}>
             <div className={s.card}>
                 <div className={s.card__head}>
                     <h1 className={s.card__title}>Files</h1>
+                    <button
+                        type="button"
+                        className={s.toggle}
+                        aria-pressed={down}
+                        onClick={() => {
+                            source.down = !source.down;
+                            setDown(source.down);
+                            if (!source.down) {
+                                setFailed(null);
+                            }
+                        }}
+                    >
+                        {down ? 'Restore source' : 'Simulate outage'}
+                    </button>
                     <span className={s.card__count}>{TOTAL.toLocaleString()} files</span>
                 </div>
+
+                {failed !== null && (
+                    <p className={s.notice}>Could not load page {failed}. Retrying.</p>
+                )}
 
                 <div className={s.columns}>
                     <div className={s['col--name']}>Name</div>
@@ -93,6 +120,7 @@ function App() {
                         renderer={(item) => (item ? <Row item={item} /> : <Loading />)}
                         fetcher={source}
                         onSelected={(_, item) => setSelected(item)}
+                        onError={(page) => setFailed(page)}
                     />
                 </div>
 

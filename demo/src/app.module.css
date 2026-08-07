@@ -109,3 +109,28 @@
     font-weight: 600;
     font-family: ui-monospace, monospace;
 }
+
+.toggle {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+    border-color: #f0b4b4;
+    background: #fdf2f2;
+    color: #a33a3a;
+}
+
+.notice {
+    padding: 0.625rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: #fdf2f2;
+    color: #a33a3a;
+    font-size: 0.8125rem;
+}
