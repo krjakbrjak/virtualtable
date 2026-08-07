@@ -111,6 +111,9 @@ const SizeChecker = <Type,>({
                     visibility: 'hidden',
                     position: 'absolute',
                     pointerEvents: 'none',
+                    // Absolute, so without this it would shrink-wrap and be
+                    // measured at a width no real row is laid out at.
+                    width: '100%',
                 }}
             >
                 {renderer(data[0])}

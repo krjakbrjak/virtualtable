@@ -332,23 +332,6 @@ export default function VirtualTable<Type>({
 
     return (
         <>
-            <SizeChecker
-                ref={invisible}
-                on_ready={() =>
-                    dispatch({
-                        type: INITIALIZED,
-                    })
-                }
-                on_error={(error) => {
-                    // The probe measures the first row, so a failure here is
-                    // reported against page 0.
-                    if (onError) {
-                        onError(0, error);
-                    }
-                }}
-                fetcher={fetcher}
-                renderer={renderer}
-            />
             <Container
                 className="position-relative"
                 style={{ padding: 0, height: '100%', width: '100%' }}
@@ -396,6 +379,23 @@ export default function VirtualTable<Type>({
                                         )}
                                 </tbody>
                             </Table>
+                            <SizeChecker
+                                ref={invisible}
+                                on_ready={() =>
+                                    dispatch({
+                                        type: INITIALIZED,
+                                    })
+                                }
+                                on_error={(error) => {
+                                    // The probe measures the first row, so a
+                                    // failure here is reported against page 0.
+                                    if (onError) {
+                                        onError(0, error);
+                                    }
+                                }}
+                                fetcher={fetcher}
+                                renderer={renderer}
+                            />
                         </div>
                         <div
                             ref={scrolldiv}
@@ -440,8 +440,7 @@ export default function VirtualTable<Type>({
                                     return;
                                 }
                                 const position = index - Math.floor(state.scrollTop / get_height());
-                                const row =
-                                    ref.current.children[0]?.children[0]?.children[position];
+                                const row = ref.current.querySelector('tbody')?.children[position];
                                 if (!row) {
                                     return;
                                 }
