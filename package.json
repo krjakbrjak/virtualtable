@@ -48,13 +48,15 @@
         "@types/react-dom": "^19.2.4",
         "jsdom": "^30.0.1",
         "oxlint": "^1.77.0",
+        "playwright-core": "^1.62.1",
         "prettier": "^3.9.6",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "typescript": "^7.0.2",
         "vite": "^8.2.1",
         "vite-plugin-css-injected-by-js": "^5.0.2",
-        "vitest": "^4.1.10"
+        "vitest": "^4.1.10",
+        "yargs": "^18.1.0"
     },
     "scripts": {
         "build": "vite build && tsc -p tsconfig.build.json",
@@ -64,6 +66,8 @@
         "typecheck": "tsc --noEmit",
         "lint": "oxlint src",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "record:frames": "node scripts/record-demo.mjs --frames .frames",
+        "record:demo": "yarn record:frames --url http://localhost:9001/ && ffmpeg -y -framerate 15 -i .frames/%04d.png -vf \"scale=780:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=3\" -loop 0 demo.gif"
     }
 }

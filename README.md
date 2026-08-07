@@ -5,7 +5,7 @@
 An implementation of a table displaying large data sets. See [doc](./docs/doc.md) for more details.
 
 <p align="center">
-<img src="./demo.gif" alt="VirtualTable demo" width="640" height="400" />
+<img src="./demo.gif" alt="VirtualTable demo" width="560" />
 </p>
 
 ## Getting Started
