@@ -2,7 +2,7 @@ import { fetch_items } from '../helpers/collections';
 import { reducer, LOAD, LOADED } from '../helpers/reducer';
 import { State } from '../helpers/state';
 import { retry_delay } from '../helpers/retry';
-import { DataSource, Result, Status, get_page_status } from '../helpers/types';
+import { Data, DataSource, Result, Status, get_page_status } from '../helpers/types';
 
 // A source that fails on demand, so a transient outage can be simulated.
 class Flaky implements DataSource<number> {
@@ -76,7 +76,7 @@ describe('transient fetch failure', () => {
 
         expect(next.scrollTop).toBe(500);
         expect(next.selected).toBe(42);
-        expect(next.data.totalCount).toBe(100);
+        expect(next.data?.totalCount).toBe(100);
         expect(next.retries[5]).toBe(1);
     });
 
@@ -98,8 +98,10 @@ describe('transient fetch failure', () => {
             payload: { data: { totalCount: 0, pageSize: 10, pages: { 0: Status.Error } } },
         });
 
-        expect(state.data.pages[0]).not.toBe(Status.Loading);
-        expect(get_page_status(state.data, 0)).toBe(Status.Error);
+        const data = state.data;
+        expect(data).toBeDefined();
+        expect(data?.pages[0]).not.toBe(Status.Loading);
+        expect(get_page_status(data as Data<number>, 0)).toBe(Status.Error);
         expect(state.retries[0]).toBe(1);
     });
 
@@ -122,7 +124,7 @@ describe('transient fetch failure', () => {
 
         const next = reducer(healthy(), { type: LOADED, payload: { data: grown } });
 
-        expect(next.data.totalCount).toBe(250);
+        expect(next.data?.totalCount).toBe(250);
         expect(next.scrollTop).toBe(0);
         expect(next.selected).toBe(-1);
     });

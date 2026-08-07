@@ -23,13 +23,17 @@ import {
 import { get_initial_state, get_total_count } from './helpers/state';
 import { retry_delay } from './helpers/retry';
 import { DataSource, Status, Style, Pages } from './helpers/types';
-import SizeChecker from './SizeChecker';
+import SizeChecker, { ISizeChecker } from './SizeChecker';
 
 import './base.css';
 import { JSX } from 'react/jsx-runtime';
 
 interface Args<Type> {
-    renderer: (data: Type) => ReactNode;
+    /**
+     * Renders one row. Called with `undefined` when the row's page has not
+     * been loaded yet, or failed to load, so both cases have to be handled.
+     */
+    renderer: (data: Type | undefined) => ReactNode;
     fetcher: DataSource<Type>;
     style?: Style;
     striped?: boolean;
@@ -62,9 +66,9 @@ export default function VirtualTable<Type>({
     onSelected,
     onError,
 }: Args<Type>): JSX.Element {
-    const ref = useRef(null);
-    const invisible = useRef(null);
-    const scrolldiv = useRef(null);
+    const ref = useRef<HTMLDivElement>(null);
+    const invisible = useRef<ISizeChecker>(null);
+    const scrolldiv = useRef<HTMLDivElement>(null);
     // Pending retry timers, keyed by page. Handles rather than state: they are
     // resources to be cleared, and the attempt counts they act on live in the
     // reducer.
@@ -223,9 +227,11 @@ export default function VirtualTable<Type>({
                 }
                 break;
             case Status.Loaded:
-                if (itemHeight) {
+                // Without the viewport there is no page size to compute, and
+                // the arithmetic below would run on NaN.
+                if (itemHeight && ref.current) {
                     const offset = Math.floor(state.scrollTop / itemHeight);
-                    const c = calculatePageCount(ref.current?.clientHeight, itemHeight);
+                    const c = calculatePageCount(ref.current.clientHeight, itemHeight);
                     let data_pages: Pages<Type> = state.data ? state.data.pages : {};
                     const page_index = Math.floor(offset / c);
                     for (let i = -1; i < 2; ++i) {
@@ -287,6 +293,29 @@ export default function VirtualTable<Type>({
         }
     });
 
+    /**
+     * Row index under a pointer position, or null when the table has not been
+     * laid out yet and there is nothing to point at.
+     */
+    const index_at = (clientY: number): number | null => {
+        const itemHeight = get_height();
+        if (!ref.current || !scrolldiv.current || !itemHeight) {
+            return null;
+        }
+        const { top } = scrolldiv.current.getBoundingClientRect();
+        const position = Math.floor((clientY + ref.current.scrollTop - top) / itemHeight);
+        return position + Math.floor(state.scrollTop / itemHeight);
+    };
+
+    // Width of the scrollbar, so the rows stop short of it rather than running
+    // underneath. Zero until the scroll container has been laid out.
+    const content = scrolldiv.current?.children[0] as HTMLElement | undefined;
+    const scrollbar =
+        scrolldiv.current && content ? scrolldiv.current.offsetWidth - content.offsetWidth : 0;
+
+    // True when the whole collection fits without scrolling.
+    const fits = state.data !== undefined && state.data.pageSize >= state.data.totalCount;
+
     return (
         <>
             <SizeChecker
@@ -323,7 +352,7 @@ export default function VirtualTable<Type>({
                                 top: 0,
                                 left: 0,
                                 bottom: 0,
-                                width: `calc(100% - ${scrolldiv.current?.offsetWidth - scrolldiv.current?.children[0].offsetWidth}px)`,
+                                width: `calc(100% - ${scrollbar}px)`,
                                 height: '100%',
                             }}
                         >
@@ -356,7 +385,7 @@ export default function VirtualTable<Type>({
                         </div>
                         <div
                             ref={scrolldiv}
-                            className={`overflow-${state.data?.pageSize >= state.data?.totalCount ? 'auto' : 'y-scroll'} position-absolute`}
+                            className={`overflow-${fits ? 'auto' : 'y-scroll'} position-absolute`}
                             style={{
                                 padding: 0,
                                 top: 0,
@@ -365,14 +394,10 @@ export default function VirtualTable<Type>({
                                 height: '100%',
                             }}
                             onMouseMove={(e) => {
-                                const position = Math.floor(
-                                    (e.clientY +
-                                        ref.current.scrollTop -
-                                        scrolldiv.current.getBoundingClientRect().top) /
-                                        get_height(),
-                                );
-                                const offset = Math.floor(state.scrollTop / get_height());
-                                const index = position + offset;
+                                const index = index_at(e.clientY);
+                                if (index === null) {
+                                    return;
+                                }
                                 dispatch({
                                     type: SELECT,
                                     payload: {
@@ -382,18 +407,13 @@ export default function VirtualTable<Type>({
                                 });
                             }}
                             onClick={(e) => {
-                                const position = Math.floor(
-                                    (e.clientY +
-                                        ref.current.scrollTop -
-                                        scrolldiv.current.getBoundingClientRect().top) /
-                                        get_height(),
-                                );
-                                const offset = Math.floor(state.scrollTop / get_height());
-                                const index = position + offset;
+                                const index = index_at(e.clientY);
+                                if (index === null || !ref.current) {
+                                    return;
+                                }
+                                const position = index - Math.floor(state.scrollTop / get_height());
                                 const childElement =
-                                    ref.current.children[0].children[0].children[
-                                        index - Math.floor(state.scrollTop / get_height())
-                                    ];
+                                    ref.current.children[0].children[0].children[position];
                                 if (childElement) {
                                     const clickEvent = new Event('click', {
                                         bubbles: true,

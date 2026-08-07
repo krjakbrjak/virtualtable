@@ -107,7 +107,10 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                 ...state,
                 status: Status.Loaded,
                 data: {
-                    ...state?.data,
+                    // The first load happens before anything is known about
+                    // the collection, so these stand in until a page arrives.
+                    totalCount: state.data?.totalCount ?? 0,
+                    pageSize: state.data?.pageSize ?? 0,
                     pages: {
                         ...state.data?.pages,
                         ...request,
