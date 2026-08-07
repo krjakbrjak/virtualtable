@@ -2,7 +2,6 @@ import { render, act, fireEvent } from '@testing-library/react';
 
 import VirtualTable from '../VirtualTable';
 import { DataSource } from '../helpers/types';
-import { layout } from './setup';
 
 const TOTAL = 100;
 
@@ -23,8 +22,12 @@ async function settle() {
     }
 }
 
-function overlay(container: HTMLElement) {
-    return container.querySelector('.overflow-y-scroll, .overflow-auto') as HTMLElement;
+function scroller(container: HTMLElement) {
+    return container.querySelector('div[style*="overflow-y: auto"]') as HTMLElement;
+}
+
+function row(container: HTMLElement, n: number) {
+    return container.querySelectorAll('table tr')[n] as HTMLElement;
 }
 
 // Rows are rendered through the renderer, so counting its calls counts renders.
@@ -57,14 +60,12 @@ describe('hovering', () => {
         const { view, count } = setup();
         await settle();
 
-        // Halfway down a row, so every event lands on the same index.
-        const y = layout.row * 2 + layout.row / 2;
-        fireEvent.mouseMove(overlay(view.container), { clientY: y });
+        fireEvent.mouseEnter(row(view.container, 2));
         await act(async () => {});
 
         const settled = count();
         for (let i = 0; i < 8; i += 1) {
-            fireEvent.mouseMove(overlay(view.container), { clientY: y + i * 0.1 });
+            fireEvent.mouseEnter(row(view.container, 2));
         }
         await act(async () => {});
 
@@ -80,11 +81,11 @@ describe('hovering', () => {
                 /hover/.test(r.querySelector('td')?.className ?? ''),
             );
 
-        fireEvent.mouseMove(overlay(view.container), { clientY: layout.row * 2 + 1 });
+        fireEvent.mouseEnter(row(view.container, 2));
         await act(async () => {});
         expect(hovered()).toBe(2);
 
-        fireEvent.mouseMove(overlay(view.container), { clientY: layout.row * 5 + 1 });
+        fireEvent.mouseEnter(row(view.container, 5));
         await act(async () => {});
         expect(hovered()).toBe(5);
     });
@@ -93,11 +94,11 @@ describe('hovering', () => {
         const { view } = setup();
         await settle();
 
-        fireEvent.mouseMove(overlay(view.container), { clientY: layout.row * 3 + 1 });
+        fireEvent.mouseEnter(row(view.container, 3));
         await act(async () => {});
         expect(view.container.innerHTML).toMatch(/hover/);
 
-        fireEvent.mouseLeave(overlay(view.container));
+        fireEvent.mouseLeave(scroller(view.container));
         await act(async () => {});
         expect(view.container.innerHTML).not.toMatch(/hover/);
     });

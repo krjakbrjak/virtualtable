@@ -68,7 +68,6 @@ export default function VirtualTable<Type>({
     onSelected,
     onError,
 }: Args<Type>): JSX.Element {
-    const ref = useRef<HTMLDivElement>(null);
     const invisible = useRef<ISizeChecker>(null);
     const scrolldiv = useRef<HTMLDivElement>(null);
     // Pending retry timers, keyed by page. Handles rather than state: they are
@@ -104,12 +103,34 @@ export default function VirtualTable<Type>({
             } else if (i + offset === state.hovered && style) {
                 className = `${className} ${style.hover}`;
             }
+            const index = i + offset;
             ret.push(
                 <tr
-                    key={i + offset}
+                    key={index}
                     style={{
                         padding: 0,
                         width: '100%',
+                    }}
+                    onMouseEnter={() => {
+                        if (index === state.hovered) {
+                            return;
+                        }
+                        dispatch({
+                            type: SELECT,
+                            payload: {
+                                selection: Selection.HOVER,
+                                index,
+                            },
+                        });
+                    }}
+                    onClick={() => {
+                        dispatch({
+                            type: SELECT,
+                            payload: {
+                                selection: Selection.CLICK,
+                                index,
+                            },
+                        });
                     }}
                 >
                     <td
@@ -244,9 +265,9 @@ export default function VirtualTable<Type>({
             case Status.Loaded:
                 // Without the viewport there is no page size to compute, and
                 // the arithmetic below would run on NaN.
-                if (itemHeight && ref.current) {
+                if (itemHeight && scrolldiv.current) {
                     const offset = Math.floor(state.scrollTop / itemHeight);
-                    const c = calculatePageCount(ref.current.clientHeight, itemHeight);
+                    const c = calculatePageCount(scrolldiv.current.clientHeight, itemHeight);
                     let data_pages: Pages<Type> = state.data ? state.data.pages : {};
                     const page_index = Math.floor(offset / c);
                     for (let i = -1; i < 2; ++i) {
@@ -299,13 +320,7 @@ export default function VirtualTable<Type>({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Effect to run on each render to make sure that the scrolltop of
-    // the item container is up-to-date.
     useEffect(() => {
-        const itemHeight = get_height();
-        if (ref.current && itemHeight) {
-            ref.current.scrollTop = state.scrollTop % itemHeight;
-        }
         // A reset puts the collection back at the top. The scroll container has
         // to follow, otherwise the scrollbar keeps its old position while the
         // rows render from the start.
@@ -314,181 +329,99 @@ export default function VirtualTable<Type>({
         }
     });
 
-    /**
-     * Row index under a pointer position, or null when the table has not been
-     * laid out yet and there is nothing to point at.
-     */
-    const index_at = (clientY: number): number | null => {
-        const itemHeight = get_height();
-        if (!ref.current || !scrolldiv.current || !itemHeight) {
-            return null;
-        }
-        const { top } = scrolldiv.current.getBoundingClientRect();
-        const position = Math.floor((clientY + ref.current.scrollTop - top) / itemHeight);
-        return position + Math.floor(state.scrollTop / itemHeight);
-    };
-
-    // Width of the scrollbar, so the rows stop short of it rather than running
-    // underneath. Zero until the scroll container has been laid out.
-    const content = scrolldiv.current?.children[0] as HTMLElement | undefined;
-    const scrollbar =
-        scrolldiv.current && content ? scrolldiv.current.offsetWidth - content.offsetWidth : 0;
-
-    // True when the whole collection fits without scrolling.
-    const fits = state.data !== undefined && state.data.pageSize >= state.data.totalCount;
+    const itemHeight = get_height();
+    const offset = itemHeight ? Math.floor(state.scrollTop / itemHeight) : 0;
 
     return (
-        <>
-            <Container
-                className="position-relative"
-                style={{ padding: 0, height: '100%', width: '100%' }}
-            >
-                <Row style={{ padding: 0, height: '100%', width: '100%' }}>
-                    <Col
-                        style={{ padding: 0, height: '100%', width: '100%' }}
-                        className="position-relative"
+        <Container
+            className="position-relative"
+            style={{ padding: 0, height: '100%', width: '100%' }}
+        >
+            <Row style={{ padding: 0, height: '100%', width: '100%' }}>
+                <Col
+                    style={{ padding: 0, height: '100%', width: '100%' }}
+                    className="position-relative"
+                >
+                    <div
+                        ref={scrolldiv}
+                        style={{
+                            padding: 0,
+                            width: '100%',
+                            height: '100%',
+                            overflowY: 'auto',
+                        }}
+                        onScroll={(e) => {
+                            dispatch({
+                                type: SCROLL,
+                                payload: {
+                                    scrollTop: (e.target as HTMLElement).scrollTop,
+                                },
+                            });
+                        }}
+                        onMouseLeave={() => {
+                            dispatch({
+                                type: SELECT,
+                                payload: {
+                                    selection: Selection.HOVER,
+                                    index: -1,
+                                },
+                            });
+                        }}
                     >
                         <div
-                            ref={ref}
-                            className="overflow-hidden position-relative"
                             style={{
-                                padding: 0,
-                                top: 0,
-                                left: 0,
-                                bottom: 0,
-                                width: `calc(100% - ${scrollbar}px)`,
-                                height: '100%',
-                            }}
-                        >
-                            <Table
-                                className="position-relative"
-                                striped={striped}
-                                borderless
-                                style={{
-                                    padding: 0,
-                                    width: '100%',
-                                    tableLayout: 'fixed',
-                                }}
-                            >
-                                <tbody
-                                    style={{
-                                        padding: 0,
-                                    }}
-                                >
-                                    {get_height() !== 0 &&
-                                        state.data &&
-                                        generate(
-                                            Math.floor(state.scrollTop / get_height()),
-                                            get_items(
-                                                Math.floor(state.scrollTop / get_height()),
-                                                state.data,
-                                            ),
-                                        )}
-                                </tbody>
-                            </Table>
-                            <SizeChecker
-                                ref={invisible}
-                                on_ready={() =>
-                                    dispatch({
-                                        type: INITIALIZED,
-                                    })
-                                }
-                                on_error={(error) => {
-                                    // The probe measures the first row, so a
-                                    // failure here is reported against page 0.
-                                    if (onError) {
-                                        onError(0, error);
-                                    }
-                                }}
-                                fetcher={fetcher}
-                                renderer={renderer}
-                            />
-                        </div>
-                        <div
-                            ref={scrolldiv}
-                            className={`overflow-${fits ? 'auto' : 'y-scroll'} position-absolute`}
-                            style={{
-                                padding: 0,
-                                top: 0,
-                                left: 0,
+                                position: 'relative',
                                 width: '100%',
-                                height: '100%',
-                            }}
-                            onMouseMove={(e) => {
-                                const index = index_at(e.clientY);
-                                // Dispatching for a row that is already hovered
-                                // would re-render every row: useReducer runs
-                                // the reducer during render, so returning the
-                                // same state spares the effects but not this
-                                // component's own body.
-                                if (index === null || index === state.hovered) {
-                                    return;
-                                }
-                                dispatch({
-                                    type: SELECT,
-                                    payload: {
-                                        selection: Selection.HOVER,
-                                        index,
-                                    },
-                                });
-                            }}
-                            onMouseLeave={() => {
-                                dispatch({
-                                    type: SELECT,
-                                    payload: {
-                                        selection: Selection.HOVER,
-                                        index: -1,
-                                    },
-                                });
-                            }}
-                            onClick={(e) => {
-                                const index = index_at(e.clientY);
-                                if (index === null || !ref.current) {
-                                    return;
-                                }
-                                const position = index - Math.floor(state.scrollTop / get_height());
-                                const row = ref.current.querySelector('tbody')?.children[position];
-                                if (!row) {
-                                    return;
-                                }
-                                // The overlay swallows the click, so replay it
-                                // on the renderer's own element.
-                                const rendered = row.children[0]?.children[0]?.children[0];
-                                if (rendered) {
-                                    rendered.dispatchEvent(
-                                        new Event('click', {
-                                            bubbles: true,
-                                            cancelable: false,
-                                        }),
-                                    );
-                                }
-                                dispatch({
-                                    type: SELECT,
-                                    payload: {
-                                        selection: Selection.CLICK,
-                                        index,
-                                    },
-                                });
-                            }}
-                            onScroll={(e) => {
-                                dispatch({
-                                    type: SCROLL,
-                                    payload: {
-                                        scrollTop: (e.target as HTMLElement).scrollTop,
-                                    },
-                                });
+                                height: `${get_total_count(state) * itemHeight}px`,
                             }}
                         >
                             <div
                                 style={{
-                                    height: `${get_total_count(state) * get_height()}px`,
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
                                     width: '100%',
+                                    transform: `translateY(${offset * itemHeight}px)`,
                                 }}
-                            />
+                            >
+                                <Table
+                                    striped={striped}
+                                    borderless
+                                    style={{
+                                        padding: 0,
+                                        margin: 0,
+                                        width: '100%',
+                                        tableLayout: 'fixed',
+                                    }}
+                                >
+                                    <tbody style={{ padding: 0 }}>
+                                        {itemHeight !== 0 &&
+                                            state.data &&
+                                            generate(offset, get_items(offset, state.data))}
+                                    </tbody>
+                                </Table>
+                                <SizeChecker
+                                    ref={invisible}
+                                    on_ready={() =>
+                                        dispatch({
+                                            type: INITIALIZED,
+                                        })
+                                    }
+                                    on_error={(error) => {
+                                        // The probe measures the first row, so a
+                                        // failure here is reported against page 0.
+                                        if (onError) {
+                                            onError(0, error);
+                                        }
+                                    }}
+                                    fetcher={fetcher}
+                                    renderer={renderer}
+                                />
+                            </div>
                         </div>
-                    </Col>
-                </Row>
-            </Container>
-        </>
+                    </div>
+                </Col>
+            </Row>
+        </Container>
     );
 }

@@ -42,9 +42,7 @@ describe('scroll position after the collection is replaced', () => {
         const { container } = render(<VirtualTable<number> fetcher={source} renderer={renderer} />);
         await settle();
 
-        const scroller = container.querySelector(
-            '.overflow-y-scroll, .overflow-auto',
-        ) as HTMLElement;
+        const scroller = container.querySelector('div[style*="overflow-y: auto"]') as HTMLElement;
 
         // Scroll somewhere that needs a page nobody has fetched.
         scroller.scrollTop = layout.row * 60;
