@@ -1,0 +1,27 @@
+{
+    "plugins": ["react", "typescript", "jsx-a11y", "import", "vitest"],
+    "categories": {
+        "correctness": "error",
+        "suspicious": "error"
+    },
+    "env": {
+        "browser": true,
+        "es2024": true
+    },
+    "ignorePatterns": ["dist", "demo/dist", ".yarn"],
+    "rules": {
+        "react/react-in-jsx-scope": "off",
+        "import/no-unassigned-import": "off",
+        "react-hooks/exhaustive-deps": "warn",
+        "jsx-a11y/click-events-have-key-events": "warn",
+        "jsx-a11y/no-static-element-interactions": "warn"
+    },
+    "overrides": [
+        {
+            "files": ["src/**/__tests__/**"],
+            "env": {
+                "vitest/globals": true
+            }
+        }
+    ]
+}

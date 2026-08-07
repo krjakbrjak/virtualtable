@@ -1,10 +1,73 @@
 {
-    "name": "virtualtable-monorepo",
-    "private": true,
-    "scripts": {
-        "clean": "rm -fr packages/*/dist && rm -fr packages/*/node_modules && rm -fr node_modules"
+    "name": "@krjakbrjak/virtualtable",
+    "version": "2.0.0",
+    "description": "",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/krjakbrjak/virtualtable.git"
     },
-    "workspaces": [
-        "packages/*"
-    ]
+    "keywords": [
+        "tableview",
+        "listview"
+    ],
+    "author": "Nikita Vakula",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/krjakbrjak/virtualtable/issues"
+    },
+    "homepage": "https://github.com/krjakbrjak/virtualtable#readme",
+    "main": "dist/index.cjs",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
+    "packageManager": "yarn@4.18.0+sha512.fcb8716fe7cd0eece141ffc18b92193a9df9204c1ba83189c288835223fc0bbe64af473bab0d5e9927a7daeb5caf2bb07eb2787cc9338ca040ea125f2a1f2f7e",
+    "dependencies": {
+        "react-bootstrap": "^2.10.10"
+    },
+    "peerDependencies": {
+        "react": "^19.1.1",
+        "react-dom": "^19.1.1"
+    },
+    "devDependencies": {
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/node": "^26.1.2",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "jsdom": "^30.0.1",
+        "oxlint": "^1.77.0",
+        "playwright-core": "^1.62.1",
+        "prettier": "^3.9.6",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
+        "typescript": "^7.0.2",
+        "vite": "^8.2.1",
+        "vite-plugin-css-injected-by-js": "^5.0.2",
+        "vitest": "^4.1.10",
+        "yargs": "^18.1.0"
+    },
+    "scripts": {
+        "build": "vite build && tsc -p tsconfig.build.json",
+        "prepack": "vite build && tsc -p tsconfig.build.json",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint src",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "record:frames": "node scripts/record-demo.mjs --frames .frames",
+        "record:demo": "yarn record:frames --url http://localhost:9001/ && ffmpeg -y -framerate 15 -i .frames/%04d.png -vf \"scale=780:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=3\" -loop 0 demo.gif"
+    }
 }

@@ -1,0 +1,20 @@
+{
+    "name": "demo",
+    "version": "1.0.0",
+    "private": true,
+    "dependencies": {
+        "@krjakbrjak/virtualtable": "portal:..",
+        "react": "^19.2.8",
+        "react-bootstrap": "^2.10.10",
+        "react-dom": "^19.2.8"
+    },
+    "devDependencies": {
+        "typescript": "^7.0.2",
+        "vite": "^8.2.1"
+    },
+    "scripts": {
+        "start": "vite",
+        "build": "vite build",
+        "typecheck": "tsc --noEmit"
+    }
+}
