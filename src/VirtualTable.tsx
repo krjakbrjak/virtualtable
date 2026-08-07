@@ -88,6 +88,9 @@ export default function VirtualTable<Type>({
 
     const generate = (offset: number, d: Array<Type | undefined>) => {
         const ret = [];
+        // Zero until the first row has been measured, in which case there is
+        // nothing to pin the rows to yet.
+        const itemHeight = get_height() || undefined;
 
         for (let i = 0; i < d.length; i += 1) {
             let className = '';
@@ -115,7 +118,10 @@ export default function VirtualTable<Type>({
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {renderer(d[i])}
+                        {/* Keeps every row the same height. */}
+                        <div style={{ height: itemHeight, overflow: 'hidden' }}>
+                            {renderer(d[i])}
+                        </div>
                     </td>
                 </tr>,
             );
@@ -412,22 +418,29 @@ export default function VirtualTable<Type>({
                                     return;
                                 }
                                 const position = index - Math.floor(state.scrollTop / get_height());
-                                const childElement =
-                                    ref.current.children[0].children[0].children[position];
-                                if (childElement) {
-                                    const clickEvent = new Event('click', {
-                                        bubbles: true,
-                                        cancelable: false,
-                                    });
-                                    childElement.children[0].children[0].dispatchEvent(clickEvent);
-                                    dispatch({
-                                        type: SELECT,
-                                        payload: {
-                                            selection: Selection.CLICK,
-                                            index,
-                                        },
-                                    });
+                                const row =
+                                    ref.current.children[0]?.children[0]?.children[position];
+                                if (!row) {
+                                    return;
                                 }
+                                // The overlay swallows the click, so replay it
+                                // on the renderer's own element.
+                                const rendered = row.children[0]?.children[0]?.children[0];
+                                if (rendered) {
+                                    rendered.dispatchEvent(
+                                        new Event('click', {
+                                            bubbles: true,
+                                            cancelable: false,
+                                        }),
+                                    );
+                                }
+                                dispatch({
+                                    type: SELECT,
+                                    payload: {
+                                        selection: Selection.CLICK,
+                                        index,
+                                    },
+                                });
                             }}
                             onScroll={(e) => {
                                 dispatch({

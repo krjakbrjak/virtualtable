@@ -56,6 +56,17 @@ const source = new Items();
 
 The table has no height of its own, so give the element that contains it one.
 
+### Rows are all one height
+
+The table measures the first row and reuses that height for every other one.
+Scroll position, how many rows are fetched, and which row the pointer is over
+are all derived from that single measurement, so rows have to render at a
+consistent height. A placeholder that is shorter than a loaded row is the usual
+way to get this wrong; so is text long enough to wrap onto a second line.
+
+Rows are clipped to the measured height, so a row that renders taller loses its
+overflow rather than pushing the rows below it out of step.
+
 ## Props
 
 | Prop         | Type                                    | Default    | Description                                                                       |
