@@ -106,7 +106,7 @@ export default function VirtualTable<Type>({
             }
             ret.push(
                 <tr
-                    key={i}
+                    key={i + offset}
                     style={{
                         padding: 0,
                         width: '100%',
@@ -212,9 +212,16 @@ export default function VirtualTable<Type>({
             const items = data.pages[pageIndex];
             // A reset re-measures the rows, so pageSize may no longer be the
             // one this index was resolved against.
-            if (!cancelled && started === generation.current && Array.isArray(items)) {
-                onSelected(index, items[index % pageSize]);
+            if (cancelled || started !== generation.current || !Array.isArray(items)) {
+                return;
             }
+            dispatch({
+                type: LOADED,
+                payload: {
+                    data,
+                },
+            });
+            onSelected(index, items[index % pageSize]);
         });
 
         return () => {
