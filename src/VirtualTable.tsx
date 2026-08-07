@@ -48,7 +48,9 @@ interface Args<Type> {
 }
 
 function calculatePageCount(pageHeight: number, itemHeight: number) {
-    return 2 * Math.floor(pageHeight / itemHeight);
+    // At least one: a row taller than the viewport would otherwise give a page
+    // of no rows, which the page index is then derived by dividing by.
+    return Math.max(1, 2 * Math.floor(pageHeight / itemHeight));
 }
 
 /**
