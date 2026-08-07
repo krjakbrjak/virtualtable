@@ -299,6 +299,12 @@ export default function VirtualTable<Type>({
         if (ref.current && itemHeight) {
             ref.current.scrollTop = state.scrollTop % itemHeight;
         }
+        // A reset puts the collection back at the top. The scroll container has
+        // to follow, otherwise the scrollbar keeps its old position while the
+        // rows render from the start.
+        if (scrolldiv.current && state.scrollTop === 0 && scrolldiv.current.scrollTop !== 0) {
+            scrolldiv.current.scrollTop = 0;
+        }
     });
 
     /**
