@@ -169,12 +169,21 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
         case SELECT:
             switch (action.payload.selection) {
                 case Selection.CLICK:
+                    if (state.selected === action.payload.index) {
+                        return state;
+                    }
                     return {
                         ...state,
                         selected: action.payload.index,
                     };
                 case Selection.HOVER:
                 default:
+                    // Pointer movement dispatches continuously, so returning a
+                    // new state for an unchanged index would re-render every
+                    // row on each event.
+                    if (state.hovered === action.payload.index) {
+                        return state;
+                    }
                     return {
                         ...state,
                         hovered: action.payload.index,

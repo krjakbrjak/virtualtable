@@ -403,7 +403,12 @@ export default function VirtualTable<Type>({
                             }}
                             onMouseMove={(e) => {
                                 const index = index_at(e.clientY);
-                                if (index === null) {
+                                // Dispatching for a row that is already hovered
+                                // would re-render every row: useReducer runs
+                                // the reducer during render, so returning the
+                                // same state spares the effects but not this
+                                // component's own body.
+                                if (index === null || index === state.hovered) {
                                     return;
                                 }
                                 dispatch({
@@ -411,6 +416,15 @@ export default function VirtualTable<Type>({
                                     payload: {
                                         selection: Selection.HOVER,
                                         index,
+                                    },
+                                });
+                            }}
+                            onMouseLeave={() => {
+                                dispatch({
+                                    type: SELECT,
+                                    payload: {
+                                        selection: Selection.HOVER,
+                                        index: -1,
                                     },
                                 });
                             }}
