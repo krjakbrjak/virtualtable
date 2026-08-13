@@ -23,11 +23,11 @@ async function settle() {
 }
 
 function scroller(container: HTMLElement) {
-    return container.querySelector('div[style*="overflow-y: auto"]') as HTMLElement;
+    return container.querySelector('.vt-viewport') as HTMLElement;
 }
 
 function row(container: HTMLElement, n: number) {
-    return container.querySelectorAll('table tr')[n] as HTMLElement;
+    return container.querySelectorAll('.vt-row')[n] as HTMLElement;
 }
 
 // Rows are rendered through the renderer, so counting its calls counts renders.
@@ -77,8 +77,8 @@ describe('hovering', () => {
         await settle();
 
         const hovered = () =>
-            Array.from(view.container.querySelectorAll('table tr')).findIndex((r) =>
-                /hover/.test(r.querySelector('td')?.className ?? ''),
+            Array.from(view.container.querySelectorAll('.vt-row')).findIndex((r) =>
+                /hover/.test(r.className),
             );
 
         fireEvent.mouseEnter(row(view.container, 2));

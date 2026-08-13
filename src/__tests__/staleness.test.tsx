@@ -24,7 +24,7 @@ async function settle() {
 
 // The hidden element SizeChecker measures, which is where a stale probe shows.
 function probe(container: HTMLElement) {
-    return container.querySelector('div[style*="visibility: hidden"]')?.textContent ?? '';
+    return container.querySelector('.vt-probe')?.textContent ?? '';
 }
 
 describe('results that arrive after a reset', () => {
@@ -139,6 +139,6 @@ describe('results that arrive after a reset', () => {
 
         expect(probes).toBeGreaterThan(1);
         expect(errors).toContain(0);
-        expect(container.querySelector('table')?.textContent).toContain('item 0');
+        expect(container.querySelector('.vt-list')?.textContent).toContain('item 0');
     });
 });

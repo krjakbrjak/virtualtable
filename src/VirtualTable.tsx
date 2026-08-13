@@ -5,7 +5,6 @@
  */
 
 import React, { useReducer, useEffect, useRef, ReactNode } from 'react';
-import { Container, Row, Col, Table } from 'react-bootstrap';
 
 import { fetch_items, get_items } from './helpers/collections';
 
@@ -94,23 +93,26 @@ export default function VirtualTable<Type>({
         const itemHeight = get_height() || undefined;
 
         for (let i = 0; i < d.length; i += 1) {
-            let className = '';
-            if (style) {
-                className = style.item;
-            }
-            if (i + offset === state.selected && style) {
-                className = `${className} ${style.select}`;
-            } else if (i + offset === state.hovered && style) {
-                className = `${className} ${style.hover}`;
-            }
             const index = i + offset;
+            const classes = ['vt-row'];
+            if (striped && index % 2 === 1) {
+                classes.push('vt-row-striped');
+            }
+            if (style) {
+                classes.push(style.item);
+            }
+            if (index === state.selected && style) {
+                classes.push(style.select);
+            } else if (index === state.hovered && style) {
+                classes.push(style.hover);
+            }
             ret.push(
-                <tr
+                <div
                     key={index}
-                    style={{
-                        padding: 0,
-                        width: '100%',
-                    }}
+                    className={classes.join(' ')}
+                    // Keeps every row the same height, which is what the
+                    // position of the window above is calculated from.
+                    style={{ height: itemHeight }}
                     onMouseEnter={() => {
                         if (index === state.hovered) {
                             return;
@@ -133,20 +135,8 @@ export default function VirtualTable<Type>({
                         });
                     }}
                 >
-                    <td
-                        className={className}
-                        style={{
-                            padding: 0,
-                            width: '100%',
-                            textOverflow: 'ellipsis',
-                        }}
-                    >
-                        {/* Keeps every row the same height. */}
-                        <div style={{ height: itemHeight, overflow: 'hidden' }}>
-                            {renderer(d[i])}
-                        </div>
-                    </td>
-                </tr>,
+                    {renderer(d[i])}
+                </div>,
             );
         }
         return ret;
@@ -333,95 +323,61 @@ export default function VirtualTable<Type>({
     const offset = itemHeight ? Math.floor(state.scrollTop / itemHeight) : 0;
 
     return (
-        <Container
-            className="vt-root position-relative"
-            style={{ padding: 0, height: '100%', width: '100%' }}
-        >
-            <Row style={{ padding: 0, height: '100%', width: '100%' }}>
-                <Col
-                    style={{ padding: 0, height: '100%', width: '100%' }}
-                    className="position-relative"
+        <div className="vt-root">
+            <div
+                ref={scrolldiv}
+                className="vt-viewport"
+                onScroll={(e) => {
+                    dispatch({
+                        type: SCROLL,
+                        payload: {
+                            scrollTop: (e.target as HTMLElement).scrollTop,
+                        },
+                    });
+                }}
+                onMouseLeave={() => {
+                    dispatch({
+                        type: SELECT,
+                        payload: {
+                            selection: Selection.HOVER,
+                            index: -1,
+                        },
+                    });
+                }}
+            >
+                <div
+                    className="vt-spacer"
+                    style={{ height: `${get_total_count(state) * itemHeight}px` }}
                 >
                     <div
-                        ref={scrolldiv}
-                        style={{
-                            padding: 0,
-                            width: '100%',
-                            height: '100%',
-                            overflowY: 'auto',
-                        }}
-                        onScroll={(e) => {
-                            dispatch({
-                                type: SCROLL,
-                                payload: {
-                                    scrollTop: (e.target as HTMLElement).scrollTop,
-                                },
-                            });
-                        }}
-                        onMouseLeave={() => {
-                            dispatch({
-                                type: SELECT,
-                                payload: {
-                                    selection: Selection.HOVER,
-                                    index: -1,
-                                },
-                            });
-                        }}
+                        className="vt-window"
+                        style={{ transform: `translateY(${offset * itemHeight}px)` }}
                     >
-                        <div
-                            style={{
-                                position: 'relative',
-                                width: '100%',
-                                height: `${get_total_count(state) * itemHeight}px`,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    transform: `translateY(${offset * itemHeight}px)`,
-                                }}
-                            >
-                                <Table
-                                    striped={striped}
-                                    borderless
-                                    style={{
-                                        padding: 0,
-                                        margin: 0,
-                                        width: '100%',
-                                        tableLayout: 'fixed',
-                                    }}
-                                >
-                                    <tbody style={{ padding: 0 }}>
-                                        {itemHeight !== 0 &&
-                                            state.data &&
-                                            generate(offset, get_items(offset, state.data))}
-                                    </tbody>
-                                </Table>
-                                <SizeChecker
-                                    ref={invisible}
-                                    on_ready={() =>
-                                        dispatch({
-                                            type: INITIALIZED,
-                                        })
-                                    }
-                                    on_error={(error) => {
-                                        // The probe measures the first row, so a
-                                        // failure here is reported against page 0.
-                                        if (onError) {
-                                            onError(0, error);
-                                        }
-                                    }}
-                                    fetcher={fetcher}
-                                    renderer={renderer}
-                                />
-                            </div>
+                        <div className="vt-list">
+                            {itemHeight !== 0 &&
+                                state.data &&
+                                generate(offset, get_items(offset, state.data))}
                         </div>
+                        <SizeChecker
+                            ref={invisible}
+                            on_ready={() =>
+                                dispatch({
+                                    type: INITIALIZED,
+                                })
+                            }
+                            on_error={(error) => {
+                                // The probe measures the first row, so a
+                                // failure here is reported against page 0.
+                                if (onError) {
+                                    onError(0, error);
+                                }
+                            }}
+                            fetcher={fetcher}
+                            renderer={renderer}
+                        />
                     </div>
-                </Col>
-            </Row>
-        </Container>
+                </div>
+            </div>
+        </div>
     );
 }

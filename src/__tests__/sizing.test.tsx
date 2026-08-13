@@ -53,6 +53,6 @@ describe('a row taller than the viewport', () => {
         expect(source.calls.length).toBeGreaterThan(1);
         expect(source.calls.every((c) => c.count > 0)).toBe(true);
         expect(source.calls.every((c) => Number.isFinite(c.index))).toBe(true);
-        expect(container.querySelector('table')?.textContent).toContain('item 0');
+        expect(container.querySelector('.vt-list')?.textContent).toContain('item 0');
     });
 });

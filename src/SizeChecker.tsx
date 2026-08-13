@@ -105,17 +105,7 @@ const SizeChecker = <Type,>({
 
     if (data.length) {
         return (
-            <div
-                ref={invisible}
-                style={{
-                    visibility: 'hidden',
-                    position: 'absolute',
-                    pointerEvents: 'none',
-                    // Absolute, so without this it would shrink-wrap and be
-                    // measured at a width no real row is laid out at.
-                    width: '100%',
-                }}
-            >
+            <div ref={invisible} className="vt-probe">
                 {renderer(data[0])}
             </div>
         );

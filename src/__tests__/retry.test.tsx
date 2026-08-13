@@ -73,7 +73,7 @@ async function settle() {
 // The rows live in the table; SizeChecker's hidden probe renders a row too,
 // and it is outside the table, so scoping here keeps it out of assertions.
 function rows(container: HTMLElement) {
-    return container.querySelector('table')?.textContent ?? '';
+    return container.querySelector('.vt-list')?.textContent ?? '';
 }
 
 describe('page load failures', () => {
@@ -152,7 +152,7 @@ describe('page load failures', () => {
 
         // Nothing to measure means nothing to render, and no page can be
         // requested, so the probe is the only call that is ever made.
-        expect(container.querySelector('table')?.textContent).toBe('');
+        expect(container.querySelector('.vt-list')?.textContent).toBe('');
         expect(calls).toBe(1);
     });
 

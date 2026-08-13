@@ -74,7 +74,7 @@ overflow rather than pushing the rows below it out of step.
 | `fetcher`    | `DataSource<Type>`                      | _required_ | Supplies the items, a page at a time.                                             |
 | `renderer`   | `(item) => ReactNode`                   | _required_ | Renders one row. Called with `undefined` while the row's page is still loading.    |
 | `style`      | `Style`                                 | none       | Class names for row states, see [Styling](#styling-virtualtable).                 |
-| `striped`    | `boolean`                               | `false`    | Passed through to the underlying table.                                           |
+| `striped`    | `boolean`                               | `false`    | Shades every other row, by position in the collection rather than on screen.       |
 | `onSelected` | `(index: number, item: Type) => void`   | none       | Called once per selection, with the selected item.                                |
 | `onError`    | `(page: number, error: unknown) => void`| none       | Called every time a page fails to load, retries included.                         |
 
@@ -149,6 +149,27 @@ import styles from './MyTableStyles.module.css';
 
 See [index.module.css](/demo/src/index.module.css) from the [demo](/demo/).
 
-Every rule the table ships is scoped under its own root class, so importing it
+### Markup
+
+The table renders plain `div`s and brings its own stylesheet, which is bundled
+into the JavaScript and needs no separate import. It has no dependencies beyond
+React, and expects no framework CSS in the page.
+
+Every rule it ships is scoped under its own root class, so importing the table
 does not restyle anything around it. The flip side is that the page owns its own
 globals: a host that wants `box-sizing: border-box` everywhere has to say so.
+
+The class names below are what the table puts on its own elements. They are
+there to be styled or selected in a test, though rows are better addressed
+through the `style` prop above.
+
+| Class             | Element                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `vt-root`         | Outermost element.                                          |
+| `vt-viewport`     | The element that scrolls.                                   |
+| `vt-spacer`       | Carries the height of the whole collection.                 |
+| `vt-window`       | The rows currently mounted, moved into place as it scrolls. |
+| `vt-list`         | Wraps the rows.                                             |
+| `vt-row`          | One row.                                                    |
+| `vt-row-striped`  | Every other row, when `striped` is set.                     |
+| `vt-probe`        | The hidden row the height is measured on.                   |

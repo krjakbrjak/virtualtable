@@ -18,11 +18,10 @@ const DEFAULTS = { ...layout };
 Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
     get(): number {
-        // Only two elements are ever measured: SizeChecker's probe, which is
-        // the hidden one, and the scroll viewport. Everything else can share
-        // the viewport height because nothing reads it, which keeps this mock
-        // off the component's class names.
-        if (this.style && this.style.visibility === 'hidden') {
+        // Only two elements are ever measured: SizeChecker's probe and the
+        // scroll viewport. Everything else can share the viewport height
+        // because nothing reads it.
+        if (this.classList && this.classList.contains('vt-probe')) {
             return layout.row;
         }
         return layout.viewport;
