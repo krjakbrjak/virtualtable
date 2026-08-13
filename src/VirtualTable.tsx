@@ -334,7 +334,7 @@ export default function VirtualTable<Type>({
 
     return (
         <Container
-            className="position-relative"
+            className="vt-root position-relative"
             style={{ padding: 0, height: '100%', width: '100%' }}
         >
             <Row style={{ padding: 0, height: '100%', width: '100%' }}>

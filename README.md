@@ -148,3 +148,7 @@ import styles from './MyTableStyles.module.css';
 ```
 
 See [index.module.css](/demo/src/index.module.css) from the [demo](/demo/).
+
+Every rule the table ships is scoped under its own root class, so importing it
+does not restyle anything around it. The flip side is that the page owns its own
+globals: a host that wants `box-sizing: border-box` everywhere has to say so.
