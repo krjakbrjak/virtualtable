@@ -4,7 +4,7 @@
  * @author Nikita Vakula <programmistov.programmist@gmail.com>
  */
 
-import React, { useEffect, useRef, ReactNode, useState, Ref, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, ReactNode, useState } from 'react';
 
 import './base.css';
 
@@ -16,12 +16,8 @@ interface Args<Type> {
     renderer: (data: Type) => ReactNode;
     fetcher: DataSource<Type>;
     on_ready: () => void;
+    on_measured: (height: number) => void;
     on_error?: (error: unknown) => void;
-    ref?: Ref<ISizeChecker>;
-}
-
-export interface ISizeChecker {
-    height: () => number;
 }
 
 /**
@@ -36,24 +32,15 @@ const SizeChecker = <Type,>({
     renderer,
     fetcher,
     on_ready,
+    on_measured,
     on_error,
-    ref,
 }: Args<Type>): JSX.Element | null => {
     const invisible = useRef<HTMLDivElement>(null);
     const [data, setData] = useState<Array<Type>>([]);
-
-    useImperativeHandle(
-        ref,
-        () => ({
-            height: () => {
-                if (invisible && invisible.current) {
-                    return invisible.current.clientHeight;
-                }
-                return 0;
-            },
-        }),
-        [invisible],
-    );
+    // Held in a ref so the observer below can be attached once per probe
+    // element rather than being torn down on every render of the table.
+    const measured = useRef(on_measured);
+    measured.current = on_measured;
 
     useEffect(() => {
         // Guards against a slow fetch from a replaced fetcher resolving late:
@@ -102,6 +89,23 @@ const SizeChecker = <Type,>({
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetcher]);
+
+    useEffect(() => {
+        const node = invisible.current;
+        if (!node) {
+            return undefined;
+        }
+        if (typeof ResizeObserver === 'undefined') {
+            measured.current(node.clientHeight);
+            return undefined;
+        }
+        // clientHeight rather than the reported box: it is the measurement the
+        // rows are laid out against, and it is what the observer is here to
+        // keep in step.
+        const observer = new ResizeObserver(() => measured.current(node.clientHeight));
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [data]);
 
     if (data.length) {
         return (

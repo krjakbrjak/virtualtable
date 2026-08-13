@@ -67,6 +67,12 @@ way to get this wrong; so is text long enough to wrap onto a second line.
 Rows are clipped to the measured height, so a row that renders taller loses its
 overflow rather than pushing the rows below it out of step.
 
+The measurement is kept up to date rather than taken once, so a table may be
+mounted inside a dropdown, a collapsed panel or an inactive tab: nothing has a
+size in there, and the rows appear when the container is first shown. A row that
+later changes height, or a viewport that is resized, is picked up the same way,
+and the collection is fetched again at the page size that then applies.
+
 ## Props
 
 | Prop         | Type                                    | Default    | Description                                                                       |

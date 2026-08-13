@@ -27,6 +27,7 @@ function healthy(): State<number> {
         scrollTop: 500,
         selected: 42,
         hovered: -1,
+        itemHeight: 20,
         retries: {},
         data: { totalCount: 100, pageSize: 10, pages: { 4: [40, 41, 42, 43, 44] } },
     };
@@ -88,6 +89,7 @@ describe('transient fetch failure', () => {
             scrollTop: 0,
             selected: -1,
             hovered: -1,
+            itemHeight: 20,
             retries: {},
             data: { totalCount: 0, pageSize: 10, pages: {} },
         };

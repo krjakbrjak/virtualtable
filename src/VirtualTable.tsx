@@ -17,12 +17,13 @@ import {
     INITIALIZE,
     LOADED,
     LOAD,
+    MEASURED,
     RESET,
 } from './helpers/reducer';
 import { get_initial_state, get_total_count } from './helpers/state';
 import { retry_delay } from './helpers/retry';
 import { DataSource, Status, Style, Pages } from './helpers/types';
-import SizeChecker, { ISizeChecker } from './SizeChecker';
+import SizeChecker from './SizeChecker';
 
 import './base.css';
 import { JSX } from 'react/jsx-runtime';
@@ -67,7 +68,6 @@ export default function VirtualTable<Type>({
     onSelected,
     onError,
 }: Args<Type>): JSX.Element {
-    const invisible = useRef<ISizeChecker>(null);
     const scrolldiv = useRef<HTMLDivElement>(null);
     // Pending retry timers, keyed by page. Handles rather than state: they are
     // resources to be cleared, and the attempt counts they act on live in the
@@ -78,19 +78,10 @@ export default function VirtualTable<Type>({
     // dropped rather than merged into a collection that has been re-measured.
     const generation = useRef(0);
     const [state, dispatch] = useReducer(reducer<Type>, {}, get_initial_state<Type>);
-
-    const get_height = () => {
-        if (invisible && invisible.current) {
-            return invisible.current.height();
-        }
-        return 0;
-    };
+    const { itemHeight } = state;
 
     const generate = (offset: number, d: Array<Type | undefined>) => {
         const ret = [];
-        // Zero until the first row has been measured, in which case there is
-        // nothing to pin the rows to yet.
-        const itemHeight = get_height() || undefined;
 
         for (let i = 0; i < d.length; i += 1) {
             const index = i + offset;
@@ -112,7 +103,7 @@ export default function VirtualTable<Type>({
                     className={classes.join(' ')}
                     // Keeps every row the same height, which is what the
                     // position of the window above is calculated from.
-                    style={{ height: itemHeight }}
+                    style={{ height: itemHeight || undefined }}
                     onMouseEnter={() => {
                         if (index === state.hovered) {
                             return;
@@ -171,14 +162,18 @@ export default function VirtualTable<Type>({
         });
     };
 
-    // Discards everything in flight along with the collection itself. Anything
-    // that resets the collection has to go through here, otherwise a pending
-    // retry lands afterwards carrying the page size it was started with and
-    // forces another reset.
-    const reset = () => {
+    // Drops everything in flight. Anything that invalidates the collection has
+    // to go through here, otherwise a pending retry lands afterwards carrying
+    // the page size it was started with and forces another reset.
+    const discard = () => {
         generation.current += 1;
         Object.values(timers.current).forEach(clearTimeout);
         timers.current = {};
+    };
+
+    // Discards everything in flight along with the collection itself.
+    const reset = () => {
+        discard();
         dispatch({
             type: RESET,
         });
@@ -189,6 +184,11 @@ export default function VirtualTable<Type>({
         reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetcher]);
+
+    useEffect(() => {
+        discard();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.itemHeight]);
 
     // Pending retries must not outlive the component.
     useEffect(
@@ -243,7 +243,6 @@ export default function VirtualTable<Type>({
 
     // Effect to run on all state updates.
     useEffect(() => {
-        const itemHeight = get_height();
         switch (state.status) {
             case Status.Loading:
                 if (itemHeight) {
@@ -299,14 +298,21 @@ export default function VirtualTable<Type>({
     }, [state]);
 
     useEffect(() => {
-        const handler = () => {
+        const node = scrolldiv.current;
+        if (!node || typeof ResizeObserver === 'undefined') {
+            return undefined;
+        }
+        let previous = node.clientHeight;
+        const observer = new ResizeObserver(() => {
+            const height = node.clientHeight;
+            if (!height || height === previous) {
+                return;
+            }
+            previous = height;
             reset();
-        };
-
-        window.addEventListener('resize', handler);
-        return () => {
-            window.removeEventListener('resize', handler);
-        };
+        });
+        observer.observe(node);
+        return () => observer.disconnect();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -319,7 +325,6 @@ export default function VirtualTable<Type>({
         }
     });
 
-    const itemHeight = get_height();
     const offset = itemHeight ? Math.floor(state.scrollTop / itemHeight) : 0;
 
     return (
@@ -359,10 +364,15 @@ export default function VirtualTable<Type>({
                                 generate(offset, get_items(offset, state.data))}
                         </div>
                         <SizeChecker
-                            ref={invisible}
                             on_ready={() =>
                                 dispatch({
                                     type: INITIALIZED,
+                                })
+                            }
+                            on_measured={(height) =>
+                                dispatch({
+                                    type: MEASURED,
+                                    payload: { height },
                                 })
                             }
                             on_error={(error) => {
