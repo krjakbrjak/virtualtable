@@ -81,7 +81,9 @@ and the collection is fetched again at the page size that then applies.
 | `renderer`   | `(item) => ReactNode`                   | _required_ | Renders one row. Called with `undefined` while the row's page is still loading.    |
 | `style`      | `Style`                                 | none       | Class names for row states, see [Styling](#styling-virtualtable).                 |
 | `striped`    | `boolean`                               | `false`    | Shades every other row, by position in the collection rather than on screen.       |
+| `selectable` | `boolean`                               | `true`     | Whether clicking a row selects it, see [Selection](#selection).                    |
 | `onSelected` | `(index: number, item: Type) => void`   | none       | Called once per selection, with the selected item.                                |
+| `onRowClick` | `(index, item \| undefined) => void`    | none       | Called on every click, the already selected row included.                          |
 | `onError`    | `(page: number, error: unknown) => void`| none       | Called every time a page fails to load, retries included.                         |
 
 Replacing `fetcher` discards the current collection and starts again, so build it
@@ -111,6 +113,17 @@ fetched yet the call is deferred until it has, so the item is always supplied
 rather than the index alone. Only one call is made per selection.
 
 Selection is currently pointer-only: there is no keyboard path to it.
+
+`onRowClick` reports the click itself, every time, including a click on the row
+that is already selected. It is not deferred, so the item is `undefined` when
+the row's page has not been loaded, the same as in the renderer. This is the one
+to use for anything that is not single select: a toggle, a second click meaning
+"confirm", or a selection of several rows.
+
+A table whose selection is managed outside it does not need the internal one at
+all. `selectable={false}` turns it off: clicks are still reported through
+`onRowClick`, but no row is marked as selected, `onSelected` is never called,
+and the `select` class is never applied.
 
 ### Failures
 

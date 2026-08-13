@@ -37,7 +37,9 @@ interface Args<Type> {
     fetcher: DataSource<Type>;
     style?: Style;
     striped?: boolean;
+    selectable?: boolean;
     onSelected?: (index: number, item: Type) => void;
+    onRowClick?: (index: number, item: Type | undefined) => void;
     /**
      * Called every time a page fails to load, including on each retry. A page
      * on screen is retried for as long as it keeps failing, with the delay
@@ -65,7 +67,9 @@ export default function VirtualTable<Type>({
     fetcher,
     style,
     striped = false,
+    selectable = true,
     onSelected,
+    onRowClick,
     onError,
 }: Args<Type>): JSX.Element {
     const scrolldiv = useRef<HTMLDivElement>(null);
@@ -89,12 +93,14 @@ export default function VirtualTable<Type>({
             if (striped && index % 2 === 1) {
                 classes.push('vt-row-striped');
             }
-            if (style) {
+            if (style?.item) {
                 classes.push(style.item);
             }
-            if (index === state.selected && style) {
-                classes.push(style.select);
-            } else if (index === state.hovered && style) {
+            if (selectable && index === state.selected) {
+                if (style?.select) {
+                    classes.push(style.select);
+                }
+            } else if (index === state.hovered && style?.hover) {
                 classes.push(style.hover);
             }
             ret.push(
@@ -117,13 +123,21 @@ export default function VirtualTable<Type>({
                         });
                     }}
                     onClick={() => {
-                        dispatch({
-                            type: SELECT,
-                            payload: {
-                                selection: Selection.CLICK,
-                                index,
-                            },
-                        });
+                        // Reported before the selection is updated, and without
+                        // consulting it: a click on the row that is already
+                        // selected is still a click.
+                        if (onRowClick) {
+                            onRowClick(index, d[i]);
+                        }
+                        if (selectable) {
+                            dispatch({
+                                type: SELECT,
+                                payload: {
+                                    selection: Selection.CLICK,
+                                    index,
+                                },
+                            });
+                        }
                     }}
                 >
                     {renderer(d[i])}

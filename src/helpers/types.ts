@@ -69,15 +69,15 @@ export interface Style {
     /**
      * Class that will be added to the item when it is hovered.
      */
-    hover: string;
+    hover?: string;
     /**
      * Class that will be added to the item when it is selected.
      */
-    select: string;
+    select?: string;
     /**
      * Class that will be added to each item.
      */
-    item: string;
+    item?: string;
 }
 
 /**
