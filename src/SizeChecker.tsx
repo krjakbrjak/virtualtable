@@ -109,7 +109,7 @@ const SizeChecker = <Type,>({
 
     if (data.length) {
         return (
-            <div ref={invisible} className="vt-probe">
+            <div ref={invisible} className="vt-probe" aria-hidden="true">
                 {renderer(data[0])}
             </div>
         );

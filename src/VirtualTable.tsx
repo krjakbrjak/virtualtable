@@ -4,9 +4,9 @@
  * @author Nikita Vakula <programmistov.programmist@gmail.com>
  */
 
-import React, { useReducer, useEffect, useRef, ReactNode } from 'react';
+import React, { useReducer, useEffect, useRef, useId, ReactNode } from 'react';
 
-import { fetch_items, get_items } from './helpers/collections';
+import { fetch_items, get_item, get_items } from './helpers/collections';
 
 import {
     reducer,
@@ -40,6 +40,7 @@ interface Args<Type> {
     selectable?: boolean;
     onSelected?: (index: number, item: Type) => void;
     onRowClick?: (index: number, item: Type | undefined) => void;
+    'aria-label'?: string;
     /**
      * Called every time a page fails to load, including on each retry. A page
      * on screen is retried for as long as it keeps failing, with the delay
@@ -70,9 +71,14 @@ export default function VirtualTable<Type>({
     selectable = true,
     onSelected,
     onRowClick,
+    'aria-label': ariaLabel,
     onError,
 }: Args<Type>): JSX.Element {
     const scrolldiv = useRef<HTMLDivElement>(null);
+    // Row ids exist for aria-activedescendant: focus stays on the viewport,
+    // and this is how it says which row the keyboard cursor is on.
+    const listId = useId();
+    const row_id = (index: number) => `${listId}-${index}`;
     // Pending retry timers, keyed by page. Handles rather than state: they are
     // resources to be cleared, and the attempt counts they act on live in the
     // reducer.
@@ -100,12 +106,24 @@ export default function VirtualTable<Type>({
                 if (style?.select) {
                     classes.push(style.select);
                 }
-            } else if (index === state.hovered && style?.hover) {
+            } else if ((index === state.hovered || index === state.active) && style?.hover) {
+                // The keyboard cursor shares the hover class: both mean "the
+                // row being pointed at", they just follow different pointers.
                 classes.push(style.hover);
             }
             ret.push(
+                // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
                 <div
                     key={index}
+                    id={row_id(index)}
+                    // A real <option> cannot hold arbitrary row markup, hence
+                    // the role on a div.
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+                    role="option"
+                    tabIndex={-1}
+                    aria-selected={selectable ? index === state.selected : undefined}
+                    aria-setsize={get_total_count(state)}
+                    aria-posinset={index + 1}
                     className={classes.join(' ')}
                     // Keeps every row the same height, which is what the
                     // position of the window above is calculated from.
@@ -129,6 +147,16 @@ export default function VirtualTable<Type>({
                         if (onRowClick) {
                             onRowClick(index, d[i]);
                         }
+                        // A click moves the keyboard cursor too, so arrowing
+                        // afterwards continues from the clicked row rather
+                        // than from wherever the keys last were.
+                        dispatch({
+                            type: SELECT,
+                            payload: {
+                                selection: Selection.ACTIVE,
+                                index,
+                            },
+                        });
                         if (selectable) {
                             dispatch({
                                 type: SELECT,
@@ -346,6 +374,104 @@ export default function VirtualTable<Type>({
             <div
                 ref={scrolldiv}
                 className="vt-viewport"
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+                role="listbox"
+                aria-label={ariaLabel}
+                tabIndex={0}
+                aria-activedescendant={state.active >= 0 ? row_id(state.active) : undefined}
+                onKeyDown={(e) => {
+                    // Keys that started on something focusable inside a row
+                    // belong to it: preventDefault here would swallow a Space
+                    // pressed on the consumer's own button.
+                    if (e.target !== e.currentTarget) {
+                        return;
+                    }
+                    // Plain keys only: Cmd/Ctrl/Alt combinations are the
+                    // application's shortcuts, not the list's.
+                    if (e.ctrlKey || e.metaKey || e.altKey) {
+                        return;
+                    }
+                    const view = scrolldiv.current;
+                    const total = get_total_count(state);
+                    if (!view || !total || !itemHeight) {
+                        return;
+                    }
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        if (state.active < 0) {
+                            return;
+                        }
+                        e.preventDefault();
+                        // The same contract as a click on the row: reported
+                        // every time, item undefined when its page is not
+                        // loaded, selection only when the table selects.
+                        if (onRowClick) {
+                            onRowClick(
+                                state.active,
+                                state.data ? get_item(state.active, state.data) : undefined,
+                            );
+                        }
+                        if (selectable) {
+                            dispatch({
+                                type: SELECT,
+                                payload: {
+                                    selection: Selection.CLICK,
+                                    index: state.active,
+                                },
+                            });
+                        }
+                        return;
+                    }
+                    // Page steps move by what is actually visible, which the
+                    // page-size arithmetic above doubles for fetching.
+                    const rows = Math.max(1, Math.floor(view.clientHeight / itemHeight));
+                    const current = state.active;
+                    let next: number;
+                    switch (e.key) {
+                        case 'ArrowDown':
+                            next = current < 0 ? 0 : Math.min(current + 1, total - 1);
+                            break;
+                        case 'ArrowUp':
+                            next = current < 0 ? 0 : Math.max(current - 1, 0);
+                            break;
+                        case 'PageDown':
+                            next = current < 0 ? rows - 1 : Math.min(current + rows, total - 1);
+                            break;
+                        case 'PageUp':
+                            next = current < 0 ? 0 : Math.max(current - rows, 0);
+                            break;
+                        case 'Home':
+                            next = 0;
+                            break;
+                        case 'End':
+                            next = total - 1;
+                            break;
+                        default:
+                            return;
+                    }
+                    e.preventDefault();
+                    dispatch({
+                        type: SELECT,
+                        payload: {
+                            selection: Selection.ACTIVE,
+                            index: next,
+                        },
+                    });
+                    const top = next * itemHeight;
+                    const bottom = top + itemHeight;
+                    if (top < view.scrollTop) {
+                        view.scrollTop = top;
+                    } else if (bottom > view.scrollTop + view.clientHeight) {
+                        view.scrollTop = bottom - view.clientHeight;
+                    }
+                    if (view.scrollTop !== state.scrollTop) {
+                        dispatch({
+                            type: SCROLL,
+                            payload: {
+                                scrollTop: view.scrollTop,
+                            },
+                        });
+                    }
+                }}
                 onScroll={(e) => {
                     dispatch({
                         type: SCROLL,
@@ -366,13 +492,15 @@ export default function VirtualTable<Type>({
             >
                 <div
                     className="vt-spacer"
+                    role="presentation"
                     style={{ height: `${get_total_count(state) * itemHeight}px` }}
                 >
                     <div
                         className="vt-window"
+                        role="presentation"
                         style={{ transform: `translateY(${offset * itemHeight}px)` }}
                     >
-                        <div className="vt-list">
+                        <div className="vt-list" role="presentation">
                             {itemHeight !== 0 &&
                                 state.data &&
                                 generate(offset, get_items(offset, state.data))}

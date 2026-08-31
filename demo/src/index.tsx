@@ -119,6 +119,7 @@ function App() {
                         style={rowStyle as Style}
                         renderer={(item) => (item ? <Row item={item} /> : <Loading />)}
                         fetcher={source}
+                        aria-label="Files"
                         onSelected={(_, item) => setSelected(item)}
                         onError={(page) => setFailed(page)}
                     />

@@ -13,6 +13,7 @@ export const MEASURED = 'MEASURED';
 export enum Selection {
     CLICK,
     HOVER,
+    ACTIVE,
 }
 
 interface ScrollAction {
@@ -109,6 +110,9 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
             }
             return state;
         case SCROLL:
+            if (state.scrollTop === action.payload.scrollTop) {
+                return state;
+            }
             return {
                 ...state,
                 ...action.payload,
@@ -194,6 +198,14 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                     return {
                         ...state,
                         selected: action.payload.index,
+                    };
+                case Selection.ACTIVE:
+                    if (state.active === action.payload.index) {
+                        return state;
+                    }
+                    return {
+                        ...state,
+                        active: action.payload.index,
                     };
                 case Selection.HOVER:
                 default:

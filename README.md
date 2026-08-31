@@ -84,6 +84,7 @@ and the collection is fetched again at the page size that then applies.
 | `selectable` | `boolean`                               | `true`     | Whether clicking a row selects it, see [Selection](#selection).                    |
 | `onSelected` | `(index: number, item: Type) => void`   | none       | Called once per selection, with the selected item.                                |
 | `onRowClick` | `(index, item \| undefined) => void`    | none       | Called on every click, the already selected row included.                          |
+| `aria-label` | `string`                                | none       | Names the list for assistive technology.                                           |
 | `onError`    | `(page: number, error: unknown) => void`| none       | Called every time a page fails to load, retries included.                         |
 
 Replacing `fetcher` discards the current collection and starts again, so build it
@@ -112,7 +113,13 @@ how tall a row is.
 fetched yet the call is deferred until it has, so the item is always supplied
 rather than the index alone. Only one call is made per selection.
 
-Selection is currently pointer-only: there is no keyboard path to it.
+The table is focusable and drives a cursor from the keyboard: the arrows move
+it one row, PageUp and PageDown one screen, Home and End to the ends, and Enter
+or Space commits it — the same as clicking the row. The cursor is not the
+selection: moving through the rows selects nothing until it is committed. It is
+rendered with the `hover` class, and reported to assistive technology through
+`aria-activedescendant`; the table itself is a `listbox` of `option` rows, so
+pass `aria-label` to name it.
 
 `onRowClick` reports the click itself, every time, including a click on the row
 that is already selected. It is not deferred, so the item is `undefined` when
