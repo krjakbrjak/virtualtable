@@ -8,10 +8,12 @@ export const LOADED = 'LOADED';
 export const RESET = 'RESET';
 export const INITIALIZE = 'INITIALIZE';
 export const INITIALIZED = 'INITIALIZED';
+export const MEASURED = 'MEASURED';
 
 export enum Selection {
     CLICK,
     HOVER,
+    ACTIVE,
 }
 
 interface ScrollAction {
@@ -55,6 +57,13 @@ interface InitializedAction {
     type: typeof INITIALIZED;
 }
 
+interface MeasuredAction {
+    type: typeof MEASURED;
+    payload: {
+        height: number;
+    };
+}
+
 type Action<Type> =
     | ScrollAction
     | SelectAction
@@ -62,7 +71,8 @@ type Action<Type> =
     | ResetAction
     | LoadAction
     | InitializeAction
-    | InitializedAction;
+    | InitializedAction
+    | MeasuredAction;
 /**
  * Reducer function for managing state changes.
  *
@@ -76,6 +86,15 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
         case RESET:
             return {
                 ...get_initial_state<Type>(),
+                itemHeight: state.itemHeight,
+            };
+        case MEASURED:
+            if (!action.payload.height || action.payload.height === state.itemHeight) {
+                return state;
+            }
+            return {
+                ...get_initial_state<Type>(),
+                itemHeight: action.payload.height,
             };
         case INITIALIZE:
             return {
@@ -91,6 +110,9 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
             }
             return state;
         case SCROLL:
+            if (state.scrollTop === action.payload.scrollTop) {
+                return state;
+            }
             return {
                 ...state,
                 ...action.payload,
@@ -146,6 +168,7 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
             ) {
                 return {
                     ...get_initial_state<Type>(),
+                    itemHeight: state.itemHeight,
                     status: Status.Loaded,
                     data: incoming,
                     retries: count_retries({}),
@@ -175,6 +198,14 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
                     return {
                         ...state,
                         selected: action.payload.index,
+                    };
+                case Selection.ACTIVE:
+                    if (state.active === action.payload.index) {
+                        return state;
+                    }
+                    return {
+                        ...state,
+                        active: action.payload.index,
                     };
                 case Selection.HOVER:
                 default:

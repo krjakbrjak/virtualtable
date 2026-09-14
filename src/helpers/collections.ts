@@ -46,6 +46,25 @@ export function get_items<Type>(offset: number, data: Data<Type>): Array<Type | 
 }
 
 /**
+ * Returns the item at an absolute index in the collection, or `undefined` when
+ * the page holding it has not been loaded or failed to load. Unlike
+ * `get_items`, which follows the window on screen, this answers for one index
+ * anywhere in the collection.
+ *
+ * @template {Type}
+ * @param {number} index An index into the whole collection
+ * @param {Data} data Items
+ * @returns {Type | undefined}
+ */
+export function get_item<Type>(index: number, data: Data<Type>): Type | undefined {
+    if (index < 0 || data.pageSize <= 0) {
+        return undefined;
+    }
+    const page = data.pages[Math.floor(index / data.pageSize)];
+    return Array.isArray(page) ? page[index % data.pageSize] : undefined;
+}
+
+/**
  * The outcome of a fetch. Pages that failed are marked `Status.Error` in
  * `data.pages`, and the reason each one failed is kept in `errors` so the
  * caller can report it. `data.totalCount` is 0 when no page loaded, which

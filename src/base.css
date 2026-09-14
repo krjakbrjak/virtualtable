@@ -1,15 +1,63 @@
-:root {
+.vt-root {
     box-sizing: border-box;
-    --primaryColor: blue;
-    --secondaryColor: lightblue;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
 }
 
-*,
-*::before,
-*::after {
+.vt-root *,
+.vt-root *::before,
+.vt-root *::after {
     box-sizing: inherit;
 }
 
-body {
-    font-family: Helvetica, Arial, sans-serif;
+.vt-viewport {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Holds the height of the whole collection, so the scrollbar reflects it. */
+.vt-spacer {
+    position: relative;
+    width: 100%;
+}
+
+.vt-window {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.vt-list {
+    width: 100%;
+}
+
+.vt-row {
+    width: 100%;
+    /* Every row is pinned to the measured height, so a renderer that returns
+       something taller cannot push the rows below it out of place. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*
+ * Zero specificity, so any class the consumer puts on a row wins over it.
+ */
+:where(.vt-root .vt-row-striped) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Measured to find the row height. Laid out, so it can be measured, but never
+   shown and never in the way of a pointer. */
+.vt-probe {
+    visibility: hidden;
+    position: absolute;
+    pointer-events: none;
+    /* Absolute, so without this it would shrink-wrap and be measured at a width
+       no real row is laid out at. */
+    width: 100%;
 }

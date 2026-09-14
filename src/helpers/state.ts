@@ -7,6 +7,18 @@ export interface State<Type> {
     selected: number;
     hovered: number;
     /**
+     * The row the keyboard cursor is on. Kept apart from `selected` because
+     * moving through the rows must not select them: a selection reports an
+     * item, and fetches the page holding it if it has to.
+     */
+    active: number;
+    /**
+     * Height of a single row, as measured on the hidden probe. Zero until the
+     * probe has been laid out, which is also what a container that is not
+     * displayed reports, so nothing can be sized or paged until it is known.
+     */
+    itemHeight: number;
+    /**
      * Consecutive failures per page, used to back off and to stop retrying a
      * page that keeps failing. An entry is dropped once the page loads.
      */
@@ -26,6 +38,8 @@ export function get_initial_state<T>(): State<T> {
         scrollTop: 0,
         selected: -1,
         hovered: -1,
+        active: -1,
+        itemHeight: 0,
         retries: {},
     };
 }

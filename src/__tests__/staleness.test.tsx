@@ -2,7 +2,7 @@ import { render, act } from '@testing-library/react';
 
 import VirtualTable from '../VirtualTable';
 import { DataSource } from '../helpers/types';
-import { layout } from './setup';
+import { layout, resize } from './setup';
 
 const TOTAL = 100;
 
@@ -24,7 +24,7 @@ async function settle() {
 
 // The hidden element SizeChecker measures, which is where a stale probe shows.
 function probe(container: HTMLElement) {
-    return container.querySelector('div[style*="visibility: hidden"]')?.textContent ?? '';
+    return container.querySelector('.vt-probe')?.textContent ?? '';
 }
 
 describe('results that arrive after a reset', () => {
@@ -50,7 +50,7 @@ describe('results that arrive after a reset', () => {
             },
         };
 
-        render(<VirtualTable<number> fetcher={source} renderer={renderer} />);
+        const { container } = render(<VirtualTable<number> fetcher={source} renderer={renderer} />);
         await advance(0);
 
         const before = 2 * Math.floor(layout.viewport / layout.row);
@@ -59,7 +59,7 @@ describe('results that arrive after a reset', () => {
         // Resize before any retry timer comes due.
         layout.viewport = 200;
         await act(async () => {
-            window.dispatchEvent(new Event('resize'));
+            resize(container.querySelector('.vt-viewport'));
         });
         const at_resize = counts.length;
         await settle();
@@ -139,6 +139,6 @@ describe('results that arrive after a reset', () => {
 
         expect(probes).toBeGreaterThan(1);
         expect(errors).toContain(0);
-        expect(container.querySelector('table')?.textContent).toContain('item 0');
+        expect(container.querySelector('.vt-list')?.textContent).toContain('item 0');
     });
 });

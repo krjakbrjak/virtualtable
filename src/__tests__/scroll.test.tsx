@@ -42,7 +42,7 @@ describe('scroll position after the collection is replaced', () => {
         const { container } = render(<VirtualTable<number> fetcher={source} renderer={renderer} />);
         await settle();
 
-        const scroller = container.querySelector('div[style*="overflow-y: auto"]') as HTMLElement;
+        const scroller = container.querySelector('.vt-viewport') as HTMLElement;
 
         // Scroll somewhere that needs a page nobody has fetched.
         scroller.scrollTop = layout.row * 60;
@@ -57,7 +57,7 @@ describe('scroll position after the collection is replaced', () => {
         fireEvent.scroll(scroller);
         await settle();
 
-        const firstRow = container.querySelector('table tr')?.textContent;
+        const firstRow = container.querySelector('.vt-row')?.textContent;
         expect(firstRow).toContain('item 0');
         // The rows say the top; the scrollbar has to agree.
         expect(scroller.scrollTop).toBe(0);
