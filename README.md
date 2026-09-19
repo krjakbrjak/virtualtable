@@ -33,6 +33,14 @@ yarn start
 The app will be available at `localhost:9001`. The "Simulate outage" toggle in
 the demo breaks the data source, so you can watch the failure handling work.
 
+## Installation
+
+```bash
+npm install @krjakbrjak/virtualtable
+# or
+yarn add @krjakbrjak/virtualtable
+```
+
 ## Usage
 
 ```jsx
