@@ -1,9 +1,9 @@
-import { Data, Status } from './types';
+import { Status } from './types';
+import { Cache } from './cache';
 
 export interface State<Type> {
     status: Status;
     scrollTop: number;
-    data?: Data<Type>;
     selected: number;
     hovered: number;
     /**
@@ -18,18 +18,11 @@ export interface State<Type> {
      * displayed reports, so nothing can be sized or paged until it is known.
      */
     itemHeight: number;
-    /**
-     * Consecutive failures per page, used to back off and to stop retrying a
-     * page that keeps failing. An entry is dropped once the page loads.
-     */
-    retries: { [page: number]: number };
+    cache: Cache<Type>;
 }
 
 export function get_total_count<Type>(state: State<Type>): number {
-    if (state.data) {
-        return state.data.totalCount;
-    }
-    return 0;
+    return state.cache.totalCount;
 }
 
 export function get_initial_state<T>(): State<T> {
@@ -40,6 +33,6 @@ export function get_initial_state<T>(): State<T> {
         hovered: -1,
         active: -1,
         itemHeight: 0,
-        retries: {},
+        cache: Cache.empty<T>(),
     };
 }

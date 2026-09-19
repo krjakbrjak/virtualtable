@@ -22,7 +22,7 @@ import {
 } from './helpers/reducer';
 import { get_initial_state, get_total_count } from './helpers/state';
 import { retry_delay } from './helpers/retry';
-import { DataSource, Status, Style, Pages } from './helpers/types';
+import { DataSource, Status, Style } from './helpers/types';
 import SizeChecker from './SizeChecker';
 
 import './base.css';
@@ -245,14 +245,14 @@ export default function VirtualTable<Type>({
     // per selection rather than on every state update. If the page holding the
     // row is not loaded, it is fetched and the report waits for it.
     useEffect(() => {
-        if (state.selected < 0 || !onSelected || !state.data) {
+        const { pageSize } = state.cache;
+        if (state.selected < 0 || !onSelected || pageSize <= 0) {
             return undefined;
         }
 
         const index = state.selected;
-        const { pageSize } = state.data;
         const pageIndex = Math.floor(index / pageSize);
-        const page = state.data.pages[pageIndex];
+        const page = state.cache.pages[pageIndex];
 
         if (Array.isArray(page)) {
             onSelected(index, page[index % pageSize]);
@@ -299,28 +299,33 @@ export default function VirtualTable<Type>({
                 if (itemHeight && scrolldiv.current) {
                     const offset = Math.floor(state.scrollTop / itemHeight);
                     const c = calculatePageCount(scrolldiv.current.clientHeight, itemHeight);
-                    let data_pages: Pages<Type> = state.data ? state.data.pages : {};
+                    const { pages, stale: marks, retries } = state.cache;
                     const page_index = Math.floor(offset / c);
                     for (let i = -1; i < 2; ++i) {
                         const page = page_index + i;
                         if (page < 0) {
                             continue;
                         }
-                        if (data_pages[page] === undefined) {
+                        const stale = marks[page] === Status.None && Array.isArray(pages[page]);
+                        if (pages[page] === undefined) {
                             load(page, c);
-                        } else if (data_pages[page] === Status.Error) {
-                            // Retried on a timer rather than immediately: this
-                            // effect runs on every state update, and the LOADED
-                            // that marks the failure is itself such an update.
+                        } else if (pages[page] === Status.Error || stale) {
+                            // A stale page is fetched right away the first
+                            // time; a page whose fetch failed, or came back
+                            // still stale, waits on a timer: this effect runs
+                            // on every state update, and the LOADED that
+                            // records the outcome is itself such an update.
                             // There is no attempt limit, only a growing delay,
                             // so a source that recovers is always noticed.
-                            if (timers.current[page] === undefined) {
+                            if (stale && !retries[page]) {
+                                load(page, c);
+                            } else if (timers.current[page] === undefined) {
                                 timers.current[page] = setTimeout(
                                     () => {
                                         delete timers.current[page];
                                         load(page, c);
                                     },
-                                    retry_delay(state.retries[page] || 0),
+                                    retry_delay(retries[page] || 0),
                                 );
                             }
                         }
@@ -359,11 +364,31 @@ export default function VirtualTable<Type>({
     }, []);
 
     useEffect(() => {
+        const node = scrolldiv.current;
+        if (!node) {
+            return;
+        }
         // A reset puts the collection back at the top. The scroll container has
         // to follow, otherwise the scrollbar keeps its old position while the
         // rows render from the start.
-        if (scrolldiv.current && state.scrollTop === 0 && scrolldiv.current.scrollTop !== 0) {
-            scrolldiv.current.scrollTop = 0;
+        if (state.scrollTop === 0 && node.scrollTop !== 0) {
+            node.scrollTop = 0;
+            return;
+        }
+        // A shrink can clamp the container without the scroll event reaching
+        // state, leaving the window pointing past the end and rendering
+        // nothing. Follow the clamp.
+        const total = get_total_count(state);
+        const max = Math.max(0, total * itemHeight - node.clientHeight);
+        if (total > 0 && state.scrollTop > max) {
+            const top = Math.min(node.scrollTop, max);
+            if (node.scrollTop !== top) {
+                node.scrollTop = top;
+            }
+            dispatch({
+                type: SCROLL,
+                payload: { scrollTop: top },
+            });
         }
     });
 
@@ -405,10 +430,7 @@ export default function VirtualTable<Type>({
                         // every time, item undefined when its page is not
                         // loaded, selection only when the table selects.
                         if (onRowClick) {
-                            onRowClick(
-                                state.active,
-                                state.data ? get_item(state.active, state.data) : undefined,
-                            );
+                            onRowClick(state.active, get_item(state.active, state.cache));
                         }
                         if (selectable) {
                             dispatch({
@@ -501,9 +523,7 @@ export default function VirtualTable<Type>({
                         style={{ transform: `translateY(${offset * itemHeight}px)` }}
                     >
                         <div className="vt-list" role="presentation">
-                            {itemHeight !== 0 &&
-                                state.data &&
-                                generate(offset, get_items(offset, state.data))}
+                            {itemHeight !== 0 && generate(offset, get_items(offset, state.cache))}
                         </div>
                         <SizeChecker
                             on_ready={() =>

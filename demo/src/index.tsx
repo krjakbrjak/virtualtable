@@ -42,13 +42,23 @@ class Files implements DataSource<File> {
     // to react to.
     down = false;
 
+    // Grown and shrunk from the header. The table only learns about it from
+    // the next fetch, so scroll to an unloaded part after changing it.
+    total = TOTAL;
+
     fetch(index: number, count: number): Promise<Result<File>> {
         if (this.down) {
             return Promise.reject(new Error(`page starting at ${index} is unavailable`));
         }
-        const items = [...Array(count).keys()].map((offset) => file(offset + index));
         return new Promise((resolve) => {
-            setTimeout(() => resolve({ from: index, items, totalCount: TOTAL }), 400);
+            setTimeout(() => {
+                // One snapshot: items and count read at the same moment, the
+                // way a server builds a response.
+                const items = [
+                    ...Array(Math.max(0, Math.min(count, this.total - index))).keys(),
+                ].map((offset) => file(offset + index));
+                resolve({ from: index, items, totalCount: this.total });
+            }, 400);
         });
     }
 }
@@ -81,6 +91,12 @@ function App() {
     const [selected, setSelected] = useState<File | null>(null);
     const [down, setDown] = useState(false);
     const [failed, setFailed] = useState<number | null>(null);
+    const [total, setTotal] = useState(source.total);
+
+    const resize = (delta: number) => {
+        source.total = Math.max(0, source.total + delta);
+        setTotal(source.total);
+    };
 
     return (
         <main className={s.page}>
@@ -101,7 +117,13 @@ function App() {
                     >
                         {down ? 'Restore source' : 'Simulate outage'}
                     </button>
-                    <span className={s.card__count}>{TOTAL.toLocaleString()} files</span>
+                    <button type="button" className={s.toggle} onClick={() => resize(500)}>
+                        Add 500
+                    </button>
+                    <button type="button" className={s.toggle} onClick={() => resize(-500)}>
+                        Remove 500
+                    </button>
+                    <span className={s.card__count}>{total.toLocaleString()} files</span>
                 </div>
 
                 {failed !== null && (

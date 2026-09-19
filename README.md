@@ -115,6 +115,14 @@ interface DataSource<Type> {
 `fetch` is also called with a count of 1 before anything is rendered, to measure
 how tall a row is.
 
+A page that arrives reporting a different `totalCount` is treated as new
+information about the same collection, not as a different collection: the count
+is adopted, the scroll position stays where it is, and the selection stays
+unless it now points past the end, in which case it is cleared. Every page
+cached before that point is considered stale — it keeps rendering what it has
+and is fetched again once it is on screen. Only replacing the `fetcher` prop
+discards the collection outright.
+
 ### Selection
 
 `onSelected` reports the row the user clicked. If that row's page has not been
@@ -147,7 +155,9 @@ delay doubling from one second up to a ceiling of thirty. There is no attempt
 limit, because nothing on the client can know when a source recovers; a source
 that comes back is picked up on the next attempt without the consumer doing
 anything. Retries are only scheduled for pages in view, so scrolling away stops
-them and scrolling back resumes them.
+them and scrolling back resumes them. A page that arrives inconsistent with the
+count it reports, shorter than the span it should fill, is retried on the same
+schedule while it keeps rendering what it has.
 
 `onError` fires on every failure, so expect repeated calls for the same page
 during an outage rather than one per page. Failures of the row-measuring fetch

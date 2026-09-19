@@ -1,8 +1,9 @@
 import { fetch_items } from '../helpers/collections';
 import { reducer, LOAD, LOADED } from '../helpers/reducer';
-import { State } from '../helpers/state';
+import { Cache } from '../helpers/cache';
+import { State, get_initial_state } from '../helpers/state';
 import { retry_delay } from '../helpers/retry';
-import { Data, DataSource, Result, Status, get_page_status } from '../helpers/types';
+import { DataSource, Result, Status, get_page_status } from '../helpers/types';
 
 // A source that fails on demand, so a transient outage can be simulated.
 class Flaky implements DataSource<number> {
@@ -23,14 +24,12 @@ class Flaky implements DataSource<number> {
 // A healthy state: one page loaded, scrolled down, row 42 selected.
 function healthy(): State<number> {
     return {
+        ...get_initial_state<number>(),
         status: Status.Loaded,
         scrollTop: 500,
         selected: 42,
-        hovered: -1,
-        active: -1,
         itemHeight: 20,
-        retries: {},
-        data: { totalCount: 100, pageSize: 10, pages: { 4: [40, 41, 42, 43, 44] } },
+        cache: new Cache(100, 10, { 4: [40, 41, 42, 43, 44] }),
     };
 }
 
@@ -78,22 +77,18 @@ describe('transient fetch failure', () => {
 
         expect(next.scrollTop).toBe(500);
         expect(next.selected).toBe(42);
-        expect(next.data?.totalCount).toBe(100);
-        expect(next.retries[5]).toBe(1);
+        expect(next.cache.totalCount).toBe(100);
+        expect(next.cache.retries[5]).toBe(1);
     });
 
     it('leaves the failed page refetchable', () => {
         // Second consecutive failure: totalCount is already 0, which used to
         // send LOADED down the merge branch and strand the page at Loading.
         let state: State<number> = {
+            ...get_initial_state<number>(),
             status: Status.Loaded,
-            scrollTop: 0,
-            selected: -1,
-            hovered: -1,
-            active: -1,
             itemHeight: 20,
-            retries: {},
-            data: { totalCount: 0, pageSize: 10, pages: {} },
+            cache: new Cache(0, 10, {}),
         };
 
         state = reducer(state, { type: LOAD, payload: { pages: [0] } });
@@ -102,34 +97,39 @@ describe('transient fetch failure', () => {
             payload: { data: { totalCount: 0, pageSize: 10, pages: { 0: Status.Error } } },
         });
 
-        const data = state.data;
-        expect(data).toBeDefined();
-        expect(data?.pages[0]).not.toBe(Status.Loading);
-        expect(get_page_status(data as Data<number>, 0)).toBe(Status.Error);
-        expect(state.retries[0]).toBe(1);
+        expect(state.cache.pages[0]).not.toBe(Status.Loading);
+        expect(get_page_status(state.cache, 0)).toBe(Status.Error);
+        expect(state.cache.retries[0]).toBe(1);
     });
 
     it('forgets the failures of a page once it loads', () => {
         let state = healthy();
-        state.retries = { 4: 2 };
+        state.cache = new Cache(100, 10, state.cache.pages, { 4: 2 });
 
         state = reducer(state, {
             type: LOADED,
             payload: {
-                data: { totalCount: 100, pageSize: 10, pages: { 4: [40, 41, 42, 43, 44] } },
+                data: {
+                    totalCount: 100,
+                    pageSize: 10,
+                    pages: { 4: [...Array(10).keys()].map((i) => i + 40) },
+                },
             },
         });
 
-        expect(state.retries[4]).toBeUndefined();
+        expect(state.cache.retries[4]).toBeUndefined();
     });
 
-    it('still resets when the source genuinely changes', () => {
-        const grown = { totalCount: 250, pageSize: 10, pages: { 0: [0, 1, 2] } };
+    it('folds a changed total in without resetting', () => {
+        const grown = { totalCount: 250, pageSize: 10, pages: { 0: [...Array(10).keys()] } };
 
         const next = reducer(healthy(), { type: LOADED, payload: { data: grown } });
 
-        expect(next.data?.totalCount).toBe(250);
-        expect(next.scrollTop).toBe(0);
-        expect(next.selected).toBe(-1);
+        expect(next.cache.totalCount).toBe(250);
+        expect(next.scrollTop).toBe(500);
+        expect(next.selected).toBe(42);
+        // The page cached before the change is stale; the arrived one is not.
+        expect(next.cache.stale[4]).toBe(Status.None);
+        expect(next.cache.stale[0]).toBeUndefined();
     });
 });

@@ -121,72 +121,27 @@ export function reducer<Type>(state: State<Type>, action: Action<Type>): State<T
             if (state.status !== Status.Loaded) {
                 return state;
             }
-            const request: { [key: number]: typeof Status.Loading } = {};
-            for (let page of action.payload.pages) {
-                request[page] = Status.Loading;
-            }
             return {
                 ...state,
-                status: Status.Loaded,
-                data: {
-                    // The first load happens before anything is known about
-                    // the collection, so these stand in until a page arrives.
-                    totalCount: state.data?.totalCount ?? 0,
-                    pageSize: state.data?.pageSize ?? 0,
-                    pages: {
-                        ...state.data?.pages,
-                        ...request,
-                    },
-                },
+                cache: state.cache.request(action.payload.pages),
             };
         case LOADED: {
-            const incoming = action.payload.data;
-
-            // A payload in which every page failed taught us nothing about the
-            // collection: its totalCount is 0 because it is unknown, not
-            // because the source is empty. Treating that as "the source
-            // changed" is what used to wipe scroll position and selection.
-            const learned = Object.values(incoming.pages).some((page) => Array.isArray(page));
-
-            const count_retries = (base: { [page: number]: number }) => {
-                const ret = { ...base };
-                for (const key of Object.keys(incoming.pages)) {
-                    const index = Number(key);
-                    if (incoming.pages[index] === Status.Error) {
-                        ret[index] = (ret[index] || 0) + 1;
-                    } else {
-                        delete ret[index];
-                    }
-                }
-                return ret;
-            };
-
-            if (
-                learned &&
-                (state.data?.pageSize !== incoming.pageSize ||
-                    state.data?.totalCount !== incoming.totalCount)
-            ) {
+            const cache = state.cache.merge(action.payload.data);
+            // A page-size mismatch replaced the cache; the view starts over.
+            if (state.cache.pageSize > 0 && cache.pageSize !== state.cache.pageSize) {
                 return {
                     ...get_initial_state<Type>(),
                     itemHeight: state.itemHeight,
                     status: Status.Loaded,
-                    data: incoming,
-                    retries: count_retries({}),
+                    cache,
                 };
             }
             return {
                 ...state,
                 status: Status.Loaded,
-                retries: count_retries(state.retries),
-                data: {
-                    ...state?.data,
-                    pageSize: state.data?.pageSize ?? incoming.pageSize,
-                    totalCount: learned ? incoming.totalCount : (state.data?.totalCount ?? 0),
-                    pages: {
-                        ...state.data?.pages,
-                        ...incoming.pages,
-                    },
-                },
+                cache,
+                selected: cache.holds(state.selected) ? state.selected : -1,
+                active: Math.min(state.active, cache.totalCount - 1),
             };
         }
         case SELECT:
