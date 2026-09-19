@@ -19,6 +19,8 @@ import {
     LOAD,
     MEASURED,
     RESET,
+    CHANGED,
+    SHIFTED,
 } from './helpers/reducer';
 import { get_initial_state, get_total_count } from './helpers/state';
 import { retry_delay } from './helpers/retry';
@@ -186,7 +188,7 @@ export default function VirtualTable<Type>({
                 pages: [page],
             },
         });
-        fetch_items(page, 1, size, fetcher).then(({ data, errors }) => {
+        fetch_items(page, 1, size, fetcher).then(({ data, errors, version }) => {
             if (started !== generation.current) {
                 return;
             }
@@ -194,6 +196,8 @@ export default function VirtualTable<Type>({
                 type: LOADED,
                 payload: {
                     data,
+                    live: fetcher.subscribe !== undefined,
+                    version,
                 },
             });
             if (onError) {
@@ -228,6 +232,18 @@ export default function VirtualTable<Type>({
     }, [fetcher]);
 
     useEffect(() => {
+        if (!fetcher.subscribe) {
+            return undefined;
+        }
+        return fetcher.subscribe((change) =>
+            dispatch({
+                type: CHANGED,
+                payload: { change },
+            }),
+        );
+    }, [fetcher]);
+
+    useEffect(() => {
         discard();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.itemHeight]);
@@ -241,47 +257,55 @@ export default function VirtualTable<Type>({
         [],
     );
 
-    // Reports a selection once. Keyed on the selected index alone, so it runs
-    // per selection rather than on every state update. If the page holding the
-    // row is not loaded, it is fetched and the report waits for it.
+    // Reports a selection from a fresh page. Keyed on the selected index and
+    // on whether its page is fresh, so it runs per selection, and again once a
+    // change that invalidated the page has been fetched, rather than on every
+    // state update. A page not loaded, or stale, is fetched and the report
+    // waits for it.
+    const selectedPage =
+        state.cache.pageSize > 0 && state.selected >= 0
+            ? Math.floor(state.selected / state.cache.pageSize)
+            : -1;
+    const selectedFresh =
+        selectedPage >= 0 &&
+        Array.isArray(state.cache.pages[selectedPage]) &&
+        state.cache.stale[selectedPage] === undefined;
     useEffect(() => {
-        const { pageSize } = state.cache;
-        if (state.selected < 0 || !onSelected || pageSize <= 0) {
+        if (selectedPage < 0 || !onSelected) {
             return undefined;
         }
 
         const index = state.selected;
-        const pageIndex = Math.floor(index / pageSize);
-        const page = state.cache.pages[pageIndex];
+        const { pageSize } = state.cache;
 
-        if (Array.isArray(page)) {
-            onSelected(index, page[index % pageSize]);
+        if (selectedFresh) {
+            onSelected(index, (state.cache.pages[selectedPage] as Array<Type>)[index % pageSize]);
             return undefined;
         }
 
         let cancelled = false;
         const started = generation.current;
-        fetch_items(pageIndex, 1, pageSize, fetcher).then(({ data }) => {
-            const items = data.pages[pageIndex];
+        fetch_items(selectedPage, 1, pageSize, fetcher).then(({ data, version }) => {
             // A reset re-measures the rows, so pageSize may no longer be the
             // one this index was resolved against.
-            if (cancelled || started !== generation.current || !Array.isArray(items)) {
+            if (cancelled || started !== generation.current) {
                 return;
             }
             dispatch({
                 type: LOADED,
                 payload: {
                     data,
+                    live: fetcher.subscribe !== undefined,
+                    version,
                 },
             });
-            onSelected(index, items[index % pageSize]);
         });
 
         return () => {
             cancelled = true;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.selected]);
+    }, [state.selected, selectedFresh]);
 
     // Effect to run on all state updates.
     useEffect(() => {
@@ -306,28 +330,25 @@ export default function VirtualTable<Type>({
                         if (page < 0) {
                             continue;
                         }
-                        const stale = marks[page] === Status.None && Array.isArray(pages[page]);
-                        if (pages[page] === undefined) {
+                        const cached = pages[page];
+                        const stale = marks[page] === Status.None && Array.isArray(cached);
+                        if (cached !== undefined && cached !== Status.Error && !stale) {
+                            continue;
+                        }
+                        // The first attempt goes right away; after a failure,
+                        // or an arrival that could not be used, the next waits
+                        // on a timer: this effect runs on every state update,
+                        // and the LOADED that records the outcome is itself
+                        // such an update. There is no attempt limit, only a
+                        // growing delay, so a source that recovers is always
+                        // noticed.
+                        if (!retries[page]) {
                             load(page, c);
-                        } else if (pages[page] === Status.Error || stale) {
-                            // A stale page is fetched right away the first
-                            // time; a page whose fetch failed, or came back
-                            // still stale, waits on a timer: this effect runs
-                            // on every state update, and the LOADED that
-                            // records the outcome is itself such an update.
-                            // There is no attempt limit, only a growing delay,
-                            // so a source that recovers is always noticed.
-                            if (stale && !retries[page]) {
+                        } else if (timers.current[page] === undefined) {
+                            timers.current[page] = setTimeout(() => {
+                                delete timers.current[page];
                                 load(page, c);
-                            } else if (timers.current[page] === undefined) {
-                                timers.current[page] = setTimeout(
-                                    () => {
-                                        delete timers.current[page];
-                                        load(page, c);
-                                    },
-                                    retry_delay(retries[page] || 0),
-                                );
-                            }
+                            }, retry_delay(retries[page]));
                         }
                     }
                 }
@@ -366,6 +387,13 @@ export default function VirtualTable<Type>({
     useEffect(() => {
         const node = scrolldiv.current;
         if (!node) {
+            return;
+        }
+        // A change moved the scroll position (rows inserted or removed above
+        // the window); the container follows so the view stays anchored.
+        if (state.shift) {
+            node.scrollTop = state.scrollTop;
+            dispatch({ type: SHIFTED });
             return;
         }
         // A reset puts the collection back at the top. The scroll container has
@@ -546,6 +574,7 @@ export default function VirtualTable<Type>({
                             }}
                             fetcher={fetcher}
                             renderer={renderer}
+                            revision={state.applied}
                         />
                     </div>
                 </div>

@@ -19,6 +19,17 @@ export interface State<Type> {
      */
     itemHeight: number;
     cache: Cache<Type>;
+    /**
+     * Highest source version applied so far, from changes or trusted results;
+     * -1 until a live source has produced either. A change at or below it is
+     * a duplicate; a result below it is outdated and cannot touch the count.
+     */
+    applied: number;
+    /**
+     * Set when a change moved scrollTop (rows inserted or removed above the
+     * window); tells the component to move the container to match.
+     */
+    shift: boolean;
 }
 
 export function get_total_count<Type>(state: State<Type>): number {
@@ -34,5 +45,7 @@ export function get_initial_state<T>(): State<T> {
         active: -1,
         itemHeight: 0,
         cache: Cache.empty<T>(),
+        applied: -1,
+        shift: false,
     };
 }

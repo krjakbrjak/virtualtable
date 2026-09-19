@@ -54,4 +54,26 @@ describe('cache', () => {
         expect(next.pageSize).toBe(20);
         expect(next.pages).toEqual({ 0: rows(0, 20) });
     });
+
+    it('rejects an outdated result: rows kept as stale content once a count is known', () => {
+        const next = cached().merge({ totalCount: 100, pageSize: 10, pages: { 6: rows(60, 10) } });
+        const rejected = next
+            .invalidate(60, 70)
+            .reject({ totalCount: 90, pageSize: 10, pages: { 6: rows(600, 10), 5: rows(50, 10) } });
+        expect(rejected.totalCount).toBe(100);
+        expect(rejected.pages[6]).toEqual(rows(600, 10));
+        expect(rejected.stale[6]).toBe(Status.None);
+        expect(rejected.retries[6]).toBe(1);
+        // Page 5 was loading and has nothing fresher, so it takes the rows too.
+        expect(rejected.stale[5]).toBe(Status.None);
+    });
+
+    it('rejects an outdated result before anything is known: rows dropped', () => {
+        const rejected = Cache.empty<number>()
+            .request([0])
+            .reject({ totalCount: 100, pageSize: 10, pages: { 0: rows(0, 10) } });
+        expect(rejected.pageSize).toBe(0);
+        expect(rejected.pages[0]).toBeUndefined();
+        expect(rejected.retries[0]).toBe(1);
+    });
 });

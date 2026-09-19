@@ -14,7 +14,23 @@ export interface Result<Type> {
      * Total number of items that can be retrieved.
      */
     totalCount: number;
+    /**
+     * The source's version at the moment the result was computed. Required
+     * from a live source (one that implements `subscribe`); ignored otherwise.
+     */
+    version?: number;
 }
+
+/**
+ * A change a live source announces. `version` is the source's monotonic
+ * version the mutation produced; the table applies changes in version order
+ * and uses it to tell an outdated fetch result from a fresh one.
+ */
+export type Change =
+    | { kind: 'refreshed'; version: number }
+    | { kind: 'inserted'; index: number; count: number; version: number }
+    | { kind: 'removed'; index: number; count: number; version: number }
+    | { kind: 'updated'; index: number; count: number; version: number };
 
 export enum Status {
     None,
@@ -93,4 +109,11 @@ export interface DataSource<T> {
      * @returns {Promise<Result<Type>>} - A promise holding the result of the fetch.
      */
     fetch(index: number, count: number): Promise<Result<T>>;
+    /**
+     * Marks the source as live: it announces every change before that change
+     * can be observed through `fetch`, and stamps both with its version. The
+     * table subscribes while mounted; returns the function that cancels the
+     * subscription.
+     */
+    subscribe?(listener: (change: Change) => void): () => void;
 }

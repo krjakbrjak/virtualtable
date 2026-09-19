@@ -105,12 +105,18 @@ interface Result<Type> {
     from: number; // index the items start at
     items: Array<Type>;
     totalCount: number; // size of the whole collection
+    version?: number; // required from a live source, see below
 }
 
 interface DataSource<Type> {
     fetch(index: number, count: number): Promise<Result<Type>>;
+    subscribe?(listener: (change: Change) => void): () => void; // live sources
 }
 ```
+
+A `Result` must be one consistent snapshot: items and count read at the same
+moment. A page that arrives shorter than the count says it spans is treated as
+inconsistent and fetched again.
 
 `fetch` is also called with a count of 1 before anything is rendered, to measure
 how tall a row is.
@@ -123,11 +129,34 @@ cached before that point is considered stale — it keeps rendering what it has
 and is fetched again once it is on screen. Only replacing the `fetcher` prop
 discards the collection outright.
 
+### Live sources
+
+A source that changes while on screen implements `subscribe` and announces
+each change before `fetch` can observe it:
+
+```ts
+type Change =
+    | { kind: 'refreshed'; version: number } // anything may have changed
+    | { kind: 'inserted'; index: number; count: number; version: number }
+    | { kind: 'removed'; index: number; count: number; version: number }
+    | { kind: 'updated'; index: number; count: number; version: number };
+```
+
+Inserts and removals adjust the count, selection and scroll position; affected
+pages are marked stale and refetched when on screen.
+
+`version` is bumped on every mutation and copied into each `Result`. Changes
+at or below the applied version are dropped. Results below it are outdated:
+their count is ignored and their pages are refetched. A live source without
+`version` is not trusted.
+
 ### Selection
 
 `onSelected` reports the row the user clicked. If that row's page has not been
 fetched yet the call is deferred until it has, so the item is always supplied
-rather than the index alone. Only one call is made per selection.
+rather than the index alone. One call is made per selection; when a live
+change moves or alters the selected row, it is reported again once the fresh
+row has been fetched.
 
 The table is focusable and drives a cursor from the keyboard: the arrows move
 it one row, PageUp and PageDown one screen, Home and End to the ends, and Enter

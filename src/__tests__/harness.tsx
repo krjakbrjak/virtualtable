@@ -20,6 +20,10 @@ export function scroll(scroller: HTMLElement, row: number) {
     fireEvent.scroll(scroller);
 }
 
+export function spacer(container: HTMLElement) {
+    return (container.querySelector('.vt-spacer') as HTMLElement).style.height;
+}
+
 export function selected(container: HTMLElement) {
     return [...container.querySelectorAll('.vt-row')].filter(
         (row) => row.getAttribute('aria-selected') === 'true',

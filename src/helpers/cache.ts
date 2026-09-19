@@ -28,6 +28,11 @@ export class Cache<Type> implements Data<Type> {
         return new Cache<Type>(0, 0, {});
     }
 
+    /** Whether the result carries any page. */
+    static arrived<Type>(incoming: Data<Type>): boolean {
+        return Object.values(incoming.pages).some((page) => Array.isArray(page));
+    }
+
     /** Whether `index` is within the collection. */
     holds(index: number): boolean {
         return index >= 0 && index < this.totalCount;
@@ -74,7 +79,7 @@ export class Cache<Type> implements Data<Type> {
      * - A different page size discards the cache and starts from the result.
      */
     merge(incoming: Data<Type>): Cache<Type> {
-        const learned = Object.values(incoming.pages).some((page) => Array.isArray(page));
+        const learned = Cache.arrived(incoming);
         if (learned && this.pageSize > 0 && incoming.pageSize !== this.pageSize) {
             return Cache.empty<Type>().merge(incoming);
         }
@@ -91,13 +96,7 @@ export class Cache<Type> implements Data<Type> {
             const index = Number(key);
             const page = incoming.pages[index];
             if (page === Status.Error) {
-                retries[index] = (retries[index] || 0) + 1;
-                // A stale page keeps its rows rather than becoming an Error marker.
-                if (stale[index] !== undefined && Array.isArray(pages[index])) {
-                    stale[index] = Status.None;
-                } else {
-                    pages[index] = page;
-                }
+                Cache.fail(index, pages, retries, stale);
                 continue;
             }
             pages[index] = page;
@@ -114,5 +113,55 @@ export class Cache<Type> implements Data<Type> {
             }
         }
         return new Cache(totalCount, pageSize, pages, retries, stale);
+    }
+
+    /** Sets the total count announced by a change. */
+    resize(totalCount: number): Cache<Type> {
+        return new Cache(totalCount, this.pageSize, this.pages, this.retries, this.stale);
+    }
+
+    /**
+     * Merges a result that is older than the last applied change.
+     * - The total count is not touched.
+     * - Its pages are cached as stale and count as a failed attempt.
+     * - While the page size is unknown, its pages are dropped instead.
+     * - A cached page that is not stale is left alone.
+     */
+    reject(incoming: Data<Type>): Cache<Type> {
+        const pages = { ...this.pages };
+        const stale = { ...this.stale };
+        const retries = { ...this.retries };
+        for (const key of Object.keys(incoming.pages)) {
+            const index = Number(key);
+            const page = incoming.pages[index];
+            if (page === Status.Error) {
+                Cache.fail(index, pages, retries, stale);
+                continue;
+            }
+            if (
+                !Array.isArray(page) ||
+                (Array.isArray(pages[index]) && stale[index] === undefined)
+            ) {
+                continue;
+            }
+            retries[index] = (retries[index] || 0) + 1;
+            if (this.pageSize > 0) {
+                pages[index] = page;
+                stale[index] = Status.None;
+            } else {
+                delete pages[index];
+            }
+        }
+        return new Cache(this.totalCount, this.pageSize, pages, retries, stale);
+    }
+
+    /** Records a failed fetch. A stale page keeps its old rows instead of an Error marker. */
+    private static fail<Type>(index: number, pages: Pages<Type>, retries: Retries, stale: Stale) {
+        retries[index] = (retries[index] || 0) + 1;
+        if (stale[index] !== undefined && Array.isArray(pages[index])) {
+            stale[index] = Status.None;
+        } else {
+            pages[index] = Status.Error;
+        }
     }
 }

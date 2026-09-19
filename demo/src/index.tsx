@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { VirtualTable } from '@krjakbrjak/virtualtable';
-import type { Result, Style, DataSource } from '@krjakbrjak/virtualtable';
+import type { Result, Style, DataSource, Change } from '@krjakbrjak/virtualtable';
 
 import rowStyle from './index.module.css';
 import s from './app.module.css';
@@ -36,15 +36,42 @@ const file = (index: number): File => {
     };
 };
 
-// Stands in for a paginated API, latency included.
+// Stands in for a paginated API, latency included. Live: mutations bump the
+// version and are announced before they can be observed through fetch.
 class Files implements DataSource<File> {
     // Flipped by the toggle in the header, so the error handling has something
     // to react to.
     down = false;
 
-    // Grown and shrunk from the header. The table only learns about it from
-    // the next fetch, so scroll to an unloaded part after changing it.
     total = TOTAL;
+
+    version = 0;
+
+    listeners = new Set<(change: Change) => void>();
+
+    subscribe = (listener: (change: Change) => void) => {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    };
+
+    resize(delta: number) {
+        this.version += 1;
+        if (delta > 0) {
+            const index = this.total;
+            this.total += delta;
+            this.emit({ kind: 'inserted', index, count: delta, version: this.version });
+        } else {
+            const count = Math.min(this.total, -delta);
+            this.total -= count;
+            this.emit({ kind: 'removed', index: this.total, count, version: this.version });
+        }
+    }
+
+    private emit(change: Change) {
+        this.listeners.forEach((listener) => listener(change));
+    }
 
     fetch(index: number, count: number): Promise<Result<File>> {
         if (this.down) {
@@ -52,12 +79,12 @@ class Files implements DataSource<File> {
         }
         return new Promise((resolve) => {
             setTimeout(() => {
-                // One snapshot: items and count read at the same moment, the
-                // way a server builds a response.
+                // One snapshot: items, count and version read at the same
+                // moment, the way a server builds a response.
                 const items = [
                     ...Array(Math.max(0, Math.min(count, this.total - index))).keys(),
                 ].map((offset) => file(offset + index));
-                resolve({ from: index, items, totalCount: this.total });
+                resolve({ from: index, items, totalCount: this.total, version: this.version });
             }, 400);
         });
     }
@@ -94,7 +121,7 @@ function App() {
     const [total, setTotal] = useState(source.total);
 
     const resize = (delta: number) => {
-        source.total = Math.max(0, source.total + delta);
+        source.resize(delta);
         setTotal(source.total);
     };
 
