@@ -28,7 +28,7 @@ import SizeChecker from './SizeChecker';
 import './base.css';
 import { JSX } from 'react/jsx-runtime';
 
-interface Args<Type> {
+export interface VirtualTableProps<Type> {
     /**
      * Renders one row. Called with `undefined` when the row's page has not
      * been loaded yet, or failed to load, so both cases have to be handled.
@@ -73,7 +73,7 @@ export default function VirtualTable<Type>({
     onRowClick,
     'aria-label': ariaLabel,
     onError,
-}: Args<Type>): JSX.Element {
+}: VirtualTableProps<Type>): JSX.Element {
     const scrolldiv = useRef<HTMLDivElement>(null);
     // Row ids exist for aria-activedescendant: focus stays on the viewport,
     // and this is how it says which row the keyboard cursor is on.
