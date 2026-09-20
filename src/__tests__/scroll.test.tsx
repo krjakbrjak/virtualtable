@@ -1,12 +1,9 @@
-import { render, act, fireEvent } from '@testing-library/react';
+import { render } from '@testing-library/react';
 
 import VirtualTable from '../VirtualTable';
 import { DataSource, Result } from '../helpers/types';
 import { layout } from './setup';
-
-const renderer = (item: number | undefined) => (
-    <span>{item === undefined ? 'loading' : `item ${item}`}</span>
-);
+import { renderer, scroll, settle } from './harness';
 
 class Growing implements DataSource<number> {
     total = 1000;
@@ -20,15 +17,7 @@ class Growing implements DataSource<number> {
     }
 }
 
-async function settle() {
-    for (let i = 0; i < 3; i += 1) {
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(1000);
-        });
-    }
-}
-
-describe('scroll position after the collection is replaced', () => {
+describe('scroll position after the total count changes', () => {
     beforeEach(() => {
         vi.useFakeTimers();
     });
@@ -37,7 +26,7 @@ describe('scroll position after the collection is replaced', () => {
         vi.useRealTimers();
     });
 
-    it('returns the scroll container to the top with the rows', async () => {
+    it('keeps the scroll position and adopts the new total', async () => {
         const source = new Growing();
         const { container } = render(<VirtualTable<number> fetcher={source} renderer={renderer} />);
         await settle();
@@ -45,21 +34,21 @@ describe('scroll position after the collection is replaced', () => {
         const scroller = container.querySelector('.vt-viewport') as HTMLElement;
 
         // Scroll somewhere that needs a page nobody has fetched.
-        scroller.scrollTop = layout.row * 60;
-        fireEvent.scroll(scroller);
+        scroll(scroller, 60);
         await settle();
         expect(scroller.scrollTop).toBeGreaterThan(0);
 
-        // The next page to arrive reports a different total, so the reducer
-        // discards the collection and puts the model back at the top.
+        // The next page to arrive reports a different total: new information
+        // about the same collection, so the view stays where it is.
         source.total = 4000;
-        scroller.scrollTop = layout.row * 120;
-        fireEvent.scroll(scroller);
+        scroll(scroller, 120);
         await settle();
 
         const firstRow = container.querySelector('.vt-row')?.textContent;
-        expect(firstRow).toContain('item 0');
-        // The rows say the top; the scrollbar has to agree.
-        expect(scroller.scrollTop).toBe(0);
+        expect(firstRow).toContain('item 120');
+        expect(scroller.scrollTop).toBe(layout.row * 120);
+        // The spacer reflects the new total.
+        const spacer = container.querySelector('.vt-spacer') as HTMLElement;
+        expect(spacer.style.height).toBe(`${4000 * layout.row}px`);
     });
 });

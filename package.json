@@ -1,6 +1,6 @@
 {
     "name": "@krjakbrjak/virtualtable",
-    "version": "3.0.1",
+    "version": "3.1.0",
     "description": "React component that renders large, lazily fetched data sets as a virtualized list with an accurate scrollbar",
     "repository": {
         "type": "git",

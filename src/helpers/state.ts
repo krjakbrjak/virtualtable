@@ -1,9 +1,9 @@
-import { Data, Status } from './types';
+import { Status } from './types';
+import { Cache } from './cache';
 
 export interface State<Type> {
     status: Status;
     scrollTop: number;
-    data?: Data<Type>;
     selected: number;
     hovered: number;
     /**
@@ -18,18 +18,22 @@ export interface State<Type> {
      * displayed reports, so nothing can be sized or paged until it is known.
      */
     itemHeight: number;
+    cache: Cache<Type>;
     /**
-     * Consecutive failures per page, used to back off and to stop retrying a
-     * page that keeps failing. An entry is dropped once the page loads.
+     * Highest source version applied so far, from changes or trusted results;
+     * -1 until a live source has produced either. A change at or below it is
+     * a duplicate; a result below it is outdated and cannot touch the count.
      */
-    retries: { [page: number]: number };
+    applied: number;
+    /**
+     * Set when a change moved scrollTop (rows inserted or removed above the
+     * window); tells the component to move the container to match.
+     */
+    shift: boolean;
 }
 
 export function get_total_count<Type>(state: State<Type>): number {
-    if (state.data) {
-        return state.data.totalCount;
-    }
-    return 0;
+    return state.cache.totalCount;
 }
 
 export function get_initial_state<T>(): State<T> {
@@ -40,6 +44,8 @@ export function get_initial_state<T>(): State<T> {
         hovered: -1,
         active: -1,
         itemHeight: 0,
-        retries: {},
+        cache: Cache.empty<T>(),
+        applied: -1,
+        shift: false,
     };
 }

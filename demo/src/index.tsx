@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { VirtualTable } from '@krjakbrjak/virtualtable';
-import type { Result, Style, DataSource } from '@krjakbrjak/virtualtable';
+import type { Result, Style, DataSource, Change } from '@krjakbrjak/virtualtable';
 
 import rowStyle from './index.module.css';
 import s from './app.module.css';
@@ -36,19 +36,56 @@ const file = (index: number): File => {
     };
 };
 
-// Stands in for a paginated API, latency included.
+// Stands in for a paginated API, latency included. Live: mutations bump the
+// version and are announced before they can be observed through fetch.
 class Files implements DataSource<File> {
     // Flipped by the toggle in the header, so the error handling has something
     // to react to.
     down = false;
 
+    total = TOTAL;
+
+    version = 0;
+
+    listeners = new Set<(change: Change) => void>();
+
+    subscribe = (listener: (change: Change) => void) => {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    };
+
+    resize(delta: number) {
+        this.version += 1;
+        if (delta > 0) {
+            const index = this.total;
+            this.total += delta;
+            this.emit({ kind: 'inserted', index, count: delta, version: this.version });
+        } else {
+            const count = Math.min(this.total, -delta);
+            this.total -= count;
+            this.emit({ kind: 'removed', index: this.total, count, version: this.version });
+        }
+    }
+
+    private emit(change: Change) {
+        this.listeners.forEach((listener) => listener(change));
+    }
+
     fetch(index: number, count: number): Promise<Result<File>> {
         if (this.down) {
             return Promise.reject(new Error(`page starting at ${index} is unavailable`));
         }
-        const items = [...Array(count).keys()].map((offset) => file(offset + index));
         return new Promise((resolve) => {
-            setTimeout(() => resolve({ from: index, items, totalCount: TOTAL }), 400);
+            setTimeout(() => {
+                // One snapshot: items, count and version read at the same
+                // moment, the way a server builds a response.
+                const items = [
+                    ...Array(Math.max(0, Math.min(count, this.total - index))).keys(),
+                ].map((offset) => file(offset + index));
+                resolve({ from: index, items, totalCount: this.total, version: this.version });
+            }, 400);
         });
     }
 }
@@ -81,6 +118,12 @@ function App() {
     const [selected, setSelected] = useState<File | null>(null);
     const [down, setDown] = useState(false);
     const [failed, setFailed] = useState<number | null>(null);
+    const [total, setTotal] = useState(source.total);
+
+    const resize = (delta: number) => {
+        source.resize(delta);
+        setTotal(source.total);
+    };
 
     return (
         <main className={s.page}>
@@ -101,7 +144,13 @@ function App() {
                     >
                         {down ? 'Restore source' : 'Simulate outage'}
                     </button>
-                    <span className={s.card__count}>{TOTAL.toLocaleString()} files</span>
+                    <button type="button" className={s.toggle} onClick={() => resize(500)}>
+                        Add 500
+                    </button>
+                    <button type="button" className={s.toggle} onClick={() => resize(-500)}>
+                        Remove 500
+                    </button>
+                    <span className={s.card__count}>{total.toLocaleString()} files</span>
                 </div>
 
                 {failed !== null && (

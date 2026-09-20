@@ -6,8 +6,8 @@
 
 import VirtualTable from './VirtualTable';
 import type { VirtualTableProps } from './VirtualTable';
-import type { Result, DataSource, Style } from './helpers/types';
+import type { Result, DataSource, Change, Style } from './helpers/types';
 
 export { VirtualTable };
 
-export type { VirtualTableProps, Result, DataSource, Style };
+export type { VirtualTableProps, Result, DataSource, Change, Style };

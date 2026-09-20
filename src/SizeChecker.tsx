@@ -18,6 +18,11 @@ interface Args<Type> {
     on_ready: () => void;
     on_measured: (height: number) => void;
     on_error?: (error: unknown) => void;
+    /**
+     * Changes when the source does. A probe that found nothing runs again:
+     * an empty source has no row to measure until it grows one.
+     */
+    revision?: number;
 }
 
 /**
@@ -34,6 +39,7 @@ const SizeChecker = <Type,>({
     on_ready,
     on_measured,
     on_error,
+    revision = 0,
 }: Args<Type>): JSX.Element | null => {
     const invisible = useRef<HTMLDivElement>(null);
     const [data, setData] = useState<Array<Type>>([]);
@@ -41,6 +47,23 @@ const SizeChecker = <Type,>({
     // element rather than being torn down on every render of the table.
     const measured = useRef(on_measured);
     measured.current = on_measured;
+    // Restarted only when the last probe found nothing: a change arriving
+    // while a probe is in flight must not cancel it, or a busy source would
+    // never get measured.
+    const [probe, setProbe] = useState(0);
+    const empty = useRef(false);
+    const seen = useRef(revision);
+
+    useEffect(() => {
+        if (revision === seen.current) {
+            return;
+        }
+        seen.current = revision;
+        if (empty.current) {
+            empty.current = false;
+            setProbe((n) => n + 1);
+        }
+    }, [revision]);
 
     useEffect(() => {
         // Guards against a slow fetch from a replaced fetcher resolving late:
@@ -48,6 +71,8 @@ const SizeChecker = <Type,>({
         // afterwards, so the wrong height would stick.
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
+        empty.current = false;
+        const since = seen.current;
 
         const attempt = (failures: number) => {
             fetcher.fetch(0, 1).then(
@@ -60,6 +85,11 @@ const SizeChecker = <Type,>({
                     // on a measurement that is never coming.
                     if (result.items.length) {
                         setData(result.items);
+                    } else if (seen.current !== since) {
+                        // The source changed while this probe was out.
+                        setProbe((n) => n + 1);
+                    } else {
+                        empty.current = true;
                     }
                     on_ready();
                 },
@@ -88,7 +118,7 @@ const SizeChecker = <Type,>({
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetcher]);
+    }, [fetcher, probe]);
 
     useEffect(() => {
         const node = invisible.current;

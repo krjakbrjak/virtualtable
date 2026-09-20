@@ -73,6 +73,11 @@ export function get_item<Type>(index: number, data: Data<Type>): Type | undefine
 export interface Fetched<Type> {
     data: Data<Type>;
     errors: { [page: number]: unknown };
+    /**
+     * The oldest version among the fulfilled results, or undefined when a
+     * result carried none (or nothing was fulfilled).
+     */
+    version?: number;
 }
 
 /**
@@ -121,14 +126,24 @@ export async function fetch_items<Type>(
         data: { totalCount: 0, pageSize: page_size, pages: {} },
         errors: {},
     };
+    let missing = false;
     settled.forEach((outcome, i) => {
         if (outcome.status === 'fulfilled') {
             ret.data.totalCount = outcome.value.totalCount;
             ret.data.pages[outcome.value.from / page_size] = outcome.value.items;
+            const { version } = outcome.value;
+            if (version === undefined) {
+                missing = true;
+            } else {
+                ret.version = ret.version === undefined ? version : Math.min(ret.version, version);
+            }
         } else {
             ret.data.pages[requested[i]] = Status.Error;
             ret.errors[requested[i]] = outcome.reason;
         }
     });
+    if (missing) {
+        delete ret.version;
+    }
     return ret;
 }
